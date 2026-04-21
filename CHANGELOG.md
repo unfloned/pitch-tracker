@@ -2,6 +2,32 @@
 
 All notable changes are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 0.4.0
+
+Renamed from "Simple Application Tracker" to **Pitch Tracker**. First public release.
+
+### Added
+- **User profile** in Settings: full name, email, phone, signature, CV file picker
+- **Email sending** via your own SMTP (Gmail, Outlook, your own host). Pre-filled template with profile variables (company, jobTitle, contactName, name, signature). Optional CV attachment. Test-connection button
+- **SMTP password encrypted via OS keychain** (Electron safeStorage: macOS Keychain, Windows DPAPI, Linux libsecret). Existing plaintext passwords are migrated on first launch
+- **Rich-text notes** for applications (bold, italic, headings, lists, links, undo/redo) via Mantine Tiptap
+- **Backup and restore**: one-click ZIP export/import of all data (apps, agents, profile, CV, config)
+- **AI Assistant page**: chat with tool-calling against your local data. Tools: list_applications, count_by_status, stats, list_candidates, search_applications. Default uses llama3.2:3b for low CPU
+- **Analytics page**: KPI tiles (total, active, avg match, offers), applications per week (last 12), status donut, match-score distribution, remote/onsite split. Charts via Mantine Charts + recharts
+- **CV is copied into app data** on pick (not just referenced by path), so moving the source file doesn't break the email attachment. Included in backup
+- Vitest unit tests for the HTML-strip utility used by Excel export. CI now runs tests in addition to build
+
+### Changed
+- Excel export **strips HTML from rich-text notes** for clean output
+- Sidebar includes Assistant and Analytics entries
+- App title, product name, Electron window title, tray tooltip, DMG title all renamed to "Pitch Tracker"
+- Bundle identifier changed from `com.chiostudios.simple-application-tracker` to `com.chiostudios.pitch-tracker`
+- userData folder renamed from "Simple Application Tracker" to "Pitch Tracker" (migration runs on first launch)
+- Applications view toggle labels no longer wrap under the icon
+
+### Fixed
+- "List" / "Board" toggle buttons in the Applications page wrapping labels onto a second line
+
 ## 0.3.0
 
 ### Added

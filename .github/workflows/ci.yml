@@ -15,5 +15,6 @@ jobs:
               with:
                   node-version: 20
                   cache: npm
-            - run: npm install --no-fund --no-audit
+            - run: npm install --no-fund --no-audit --legacy-peer-deps
+            - run: npm test
             - run: npm run build

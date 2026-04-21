@@ -21,7 +21,7 @@ function createWindow(): void {
         height: 820,
         minWidth: 900,
         minHeight: 600,
-        title: 'Simple Application Tracker',
+        title: 'Pitch Tracker',
         backgroundColor: '#0f0f12',
         titleBarStyle: 'hiddenInset',
         show: false,
@@ -106,7 +106,7 @@ function createTray(): void {
     }
     image.setTemplateImage(true);
     tray = new Tray(image);
-    tray.setToolTip('Simple Application Tracker');
+    tray.setToolTip('Pitch Tracker');
     refreshTrayMenu();
     tray.on('click', () => createWindow());
     setInterval(refreshTrayMenu, 60 * 1000);

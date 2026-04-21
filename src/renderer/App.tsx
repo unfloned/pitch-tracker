@@ -1,26 +1,33 @@
-import { AppShell, Badge, Box, Group, Tabs, Title } from '@mantine/core';
+import { ActionIcon, AppShell, Group, Tooltip } from '@mantine/core';
 import { useHotkeys } from '@mantine/hooks';
-import { IconBriefcase, IconSparkles } from '@tabler/icons-react';
+import { IconBolt, IconDownload, IconPlus, IconSearch } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { STATUS_ORDER } from '@shared/application';
 import type { ApplicationRecord } from '../preload/index';
-import { Toolbar } from './components/Toolbar';
-import { ApplicationList } from './components/ApplicationList';
+import { Sidebar } from './components/Sidebar';
+import { CommandPalette, spotlight } from './components/CommandPalette';
 import { ApplicationFormModal } from './components/ApplicationForm';
-import { SettingsModal } from './components/SettingsModal';
 import { UpdateBanner } from './components/UpdateBanner';
 import { StatusFooter } from './components/StatusFooter';
 import { OnboardingWizard } from './components/OnboardingWizard';
-import { JobSearchesPage } from './pages/JobSearchesPage';
-
-type TabValue = 'applications' | 'candidates';
+import { DashboardPage } from './pages/DashboardPage';
+import { ApplicationsPage } from './pages/ApplicationsPage';
+import { AgentsPage } from './pages/AgentsPage';
+import { AnalyticsPage } from './pages/AnalyticsPage';
+import { CandidatesPage } from './pages/CandidatesPage';
+import { ChatPage } from './pages/ChatPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { ROUTES } from './routes';
 
 const ONBOARDING_KEY = 'simple-tracker-onboarded';
 
 export function App() {
     const { t } = useTranslation();
+    const navigate = useNavigate();
+    const location = useLocation();
     const [rows, setRows] = useState<ApplicationRecord[]>([]);
     const [visibleCount, setVisibleCount] = useState(0);
     const [newCandidatesCount, setNewCandidatesCount] = useState(0);
@@ -28,9 +35,7 @@ export function App() {
     const [formOpen, setFormOpen] = useState(false);
     const [editing, setEditing] = useState<ApplicationRecord | null>(null);
     const [quickAddUrl, setQuickAddUrl] = useState<string | null>(null);
-    const [settingsOpen, setSettingsOpen] = useState(false);
     const [onboardingOpen, setOnboardingOpen] = useState(false);
-    const [tab, setTab] = useState<TabValue>('applications');
     const searchInputRef = useRef<HTMLInputElement | null>(null);
 
     const refresh = useCallback(async () => {
@@ -55,17 +60,14 @@ export function App() {
         refreshCandidateCount();
 
         if (!localStorage.getItem(ONBOARDING_KEY)) {
-            const hasData = window.api.applications.list().then((list) => {
-                if (list.length === 0) {
-                    setOnboardingOpen(true);
-                }
+            window.api.applications.list().then((list) => {
+                if (list.length === 0) setOnboardingOpen(true);
             });
-            void hasData;
         }
 
         const unsubNav = window.api.on('navigate', (target: string) => {
             if (target === 'new') {
-                setTab('applications');
+                navigate(ROUTES.applications);
                 setEditing(null);
                 setQuickAddUrl(null);
                 setFormOpen(true);
@@ -74,7 +76,7 @@ export function App() {
         const unsubQuickAdd = window.api.on(
             'navigate:quickAdd',
             (payload: { url: string }) => {
-                setTab('applications');
+                navigate(ROUTES.applications);
                 setEditing(null);
                 setQuickAddUrl(payload.url || '');
                 setFormOpen(true);
@@ -83,7 +85,7 @@ export function App() {
         const unsubOpenApplication = window.api.on(
             'navigate:openApplication',
             async (id: string) => {
-                setTab('applications');
+                navigate(ROUTES.applications);
                 const found = await window.api.applications.get(id);
                 if (found) {
                     setEditing(found);
@@ -152,9 +154,17 @@ export function App() {
             unsubFinished();
             unsubFollowUp();
         };
-    }, [refresh, refreshCandidateCount, t]);
+    }, [refresh, refreshCandidateCount, t, navigate]);
+
+    // Reset candidates badge when visiting the page
+    useEffect(() => {
+        if (location.pathname === ROUTES.candidates) {
+            setNewCandidatesCount(0);
+        }
+    }, [location.pathname]);
 
     const openNew = () => {
+        navigate(ROUTES.applications);
         setEditing(null);
         setQuickAddUrl(null);
         setFormOpen(true);
@@ -163,6 +173,13 @@ export function App() {
     const openEdit = (row: ApplicationRecord) => {
         setEditing(row);
         setQuickAddUrl(null);
+        setFormOpen(true);
+    };
+
+    const openQuickAdd = () => {
+        navigate(ROUTES.applications);
+        setEditing(null);
+        setQuickAddUrl('');
         setFormOpen(true);
     };
 
@@ -221,142 +238,178 @@ export function App() {
         ['mod+n', () => openNew()],
         ['mod+f', () => searchInputRef.current?.focus()],
         ['mod+e', () => doExport()],
-        ['mod+,', () => setSettingsOpen(true)],
+        ['mod+,', () => navigate(ROUTES.settings)],
         ['escape', () => {
             if (formOpen) setFormOpen(false);
-            else if (settingsOpen) setSettingsOpen(false);
         }],
     ]);
 
-    const tabsSection = useMemo(
-        () => (
-            <Tabs
-                value={tab}
-                onChange={(v) => {
-                    if (v) {
-                        setTab(v as TabValue);
-                        if (v === 'candidates') {
-                            setNewCandidatesCount(0);
-                        }
-                    }
-                }}
-                variant="pills"
-                radius="md"
-                styles={{ root: { width: '100%' } }}
-            >
-                <Tabs.List>
-                    <Tabs.Tab value="applications" leftSection={<IconBriefcase size={16} />}>
-                        {t('tabs.applications')} ({rows.length})
-                    </Tabs.Tab>
-                    <Tabs.Tab
-                        value="candidates"
-                        leftSection={<IconSparkles size={16} />}
-                        rightSection={
-                            newCandidatesCount > 0 ? (
-                                <Badge size="xs" color="red" variant="filled" circle>
-                                    {newCandidatesCount}
-                                </Badge>
-                            ) : null
-                        }
-                    >
-                        {t('tabs.candidates')}
-                    </Tabs.Tab>
-                </Tabs.List>
-            </Tabs>
-        ),
-        [tab, rows.length, newCandidatesCount, t],
-    );
+    const closeForm = () => {
+        setFormOpen(false);
+        setQuickAddUrl(null);
+    };
+
+    const deleteAndRefresh = async (id: string) => {
+        await window.api.applications.delete(id);
+        await refresh();
+    };
+
+    const savedDetail = async () => {
+        setFormOpen(false);
+        setQuickAddUrl(null);
+        await refresh();
+    };
+
+    const onApplicationsRoute = location.pathname === ROUTES.applications;
 
     return (
-        <AppShell header={{ height: 110 }} footer={{ height: 52 }} padding="md">
-            <AppShell.Header>
-                <div style={{ WebkitAppRegion: 'drag' } as any}>
-                    <Group h={56} px="md" justify="space-between" pl={80}>
-                        <Title order={4}>{t('app.title')}</Title>
-                        <div style={{ WebkitAppRegion: 'no-drag' } as any}>
-                            <Toolbar
-                                onNew={openNew}
-                                onSettings={() => setSettingsOpen(true)}
-                                onExport={doExport}
-                            />
-                        </div>
-                    </Group>
-                </div>
-                <Box
-                    px="md"
-                    style={{
-                        borderTop:
-                            '1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))',
-                        WebkitAppRegion: 'no-drag',
-                    } as any}
-                >
-                    <Group h={54} gap="md">
-                        {tabsSection}
-                    </Group>
-                </Box>
+        <AppShell
+            navbar={{ width: 220, breakpoint: 'xs' }}
+            header={{ height: 48 }}
+            footer={{ height: 40 }}
+            padding="lg"
+        >
+            <AppShell.Header
+                style={{ WebkitAppRegion: 'drag', borderBottom: 'none' } as any}
+            >
+                <Group h="100%" px="md" pl={80} justify="space-between">
+                    <div />
+                    <div style={{ WebkitAppRegion: 'no-drag' } as any}>
+                        <Group gap="xs">
+                            <Tooltip label={t('cmd.placeholder') + ' (Cmd+K)'}>
+                                <ActionIcon
+                                    variant="subtle"
+                                    size="md"
+                                    onClick={() => spotlight.open()}
+                                >
+                                    <IconSearch size={16} />
+                                </ActionIcon>
+                            </Tooltip>
+                            <Tooltip label={t('toolbar.export') + ' (Cmd+E)'}>
+                                <ActionIcon variant="subtle" size="md" onClick={doExport}>
+                                    <IconDownload size={16} />
+                                </ActionIcon>
+                            </Tooltip>
+                            <Tooltip label={t('toolbar.quickAdd')}>
+                                <ActionIcon variant="subtle" size="md" onClick={openQuickAdd}>
+                                    <IconBolt size={16} />
+                                </ActionIcon>
+                            </Tooltip>
+                            <Tooltip label={t('toolbar.newEntry') + ' (Cmd+N)'}>
+                                <ActionIcon
+                                    variant="filled"
+                                    color="accent"
+                                    size="md"
+                                    onClick={openNew}
+                                >
+                                    <IconPlus size={16} />
+                                </ActionIcon>
+                            </Tooltip>
+                        </Group>
+                    </div>
+                </Group>
             </AppShell.Header>
 
-            <AppShell.Main>
-                <UpdateBanner />
-                {tab === 'applications' && (
-                    <ApplicationList
-                        rows={rows}
-                        loading={loading}
-                        onEdit={openEdit}
-                        onDelete={async (id) => {
-                            await window.api.applications.delete(id);
-                            await refresh();
-                        }}
-                        onStatusChange={async (id, status) => {
-                            await window.api.applications.update(id, { status });
-                            await refresh();
-                        }}
-                        onVisibleCountChange={setVisibleCount}
-                        onNew={openNew}
-                        searchInputRef={searchInputRef}
-                    />
-                )}
+            <AppShell.Navbar>
+                <Sidebar
+                    applicationsCount={rows.length}
+                    candidatesCount={newCandidatesCount}
+                />
+            </AppShell.Navbar>
 
-                {tab === 'candidates' && (
-                    <JobSearchesPage
-                        onCandidateImported={async () => {
-                            await refresh();
-                            await refreshCandidateCount();
-                            setTab('applications');
-                        }}
+            <AppShell.Main
+                style={{
+                    backgroundColor:
+                        'light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))',
+                }}
+            >
+                <UpdateBanner />
+                <Routes>
+                    <Route path="/" element={<Navigate to={ROUTES.dashboard} replace />} />
+                    <Route
+                        path={ROUTES.dashboard}
+                        element={
+                            <DashboardPage
+                                applications={rows}
+                                onNavigate={(key) => {
+                                    if (key === 'dashboard') navigate(ROUTES.dashboard);
+                                    else if (key === 'applications') navigate(ROUTES.applications);
+                                    else if (key === 'candidates') navigate(ROUTES.candidates);
+                                    else if (key === 'agents') navigate(ROUTES.agents);
+                                    else if (key === 'settings') navigate(ROUTES.settings);
+                                }}
+                                onNewEntry={openNew}
+                                onQuickAdd={openQuickAdd}
+                                onExport={doExport}
+                                onOpenApplication={openEdit}
+                            />
+                        }
                     />
-                )}
+                    <Route
+                        path={ROUTES.applications}
+                        element={
+                            <ApplicationsPage
+                                rows={rows}
+                                loading={loading}
+                                onEdit={openEdit}
+                                onDelete={deleteAndRefresh}
+                                onStatusChange={async (id, status) => {
+                                    await window.api.applications.update(id, { status });
+                                    await refresh();
+                                }}
+                                onNew={openNew}
+                                onVisibleCountChange={setVisibleCount}
+                                searchInputRef={searchInputRef}
+                                detailRecord={editing}
+                                detailOpen={formOpen}
+                                onCloseDetail={closeForm}
+                                onSavedDetail={savedDetail}
+                            />
+                        }
+                    />
+                    <Route
+                        path={ROUTES.candidates}
+                        element={
+                            <CandidatesPage
+                                onCandidateImported={async () => {
+                                    await refresh();
+                                    await refreshCandidateCount();
+                                    navigate(ROUTES.applications);
+                                }}
+                                onGoToAgents={() => navigate(ROUTES.agents)}
+                            />
+                        }
+                    />
+                    <Route path={ROUTES.agents} element={<AgentsPage />} />
+                    <Route path={ROUTES.chat} element={<ChatPage />} />
+                    <Route
+                        path={ROUTES.analytics}
+                        element={<AnalyticsPage applications={rows} />}
+                    />
+                    <Route path={ROUTES.settings} element={<SettingsPage />} />
+                    <Route path="*" element={<Navigate to={ROUTES.dashboard} replace />} />
+                </Routes>
             </AppShell.Main>
 
             <AppShell.Footer>
                 <StatusFooter
                     totalApplications={rows.length}
                     visibleApplications={
-                        tab === 'applications' && visibleCount > 0 ? visibleCount : rows.length
+                        onApplicationsRoute && visibleCount > 0 ? visibleCount : rows.length
                     }
                 />
             </AppShell.Footer>
 
-            <ApplicationFormModal
-                opened={formOpen}
-                onClose={() => {
-                    setFormOpen(false);
-                    setQuickAddUrl(null);
-                }}
-                initial={editing}
-                initialUrl={quickAddUrl}
-                onSaved={async () => {
-                    setFormOpen(false);
-                    setQuickAddUrl(null);
-                    await refresh();
-                }}
-                onDelete={async (id) => {
-                    await window.api.applications.delete(id);
-                    await refresh();
-                }}
-            />
-
-            <SettingsModal opened={settingsOpen} onClose={() => setSettingsOpen(false)} />
+            {!onApplicationsRoute && (
+                <ApplicationFormModal
+                    opened={formOpen}
+                    onClose={closeForm}
+                    initial={editing}
+                    initialUrl={quickAddUrl}
+                    onSaved={savedDetail}
+                    onDelete={deleteAndRefresh}
+                />
+            )}
 
             <OnboardingWizard
                 opened={onboardingOpen}
@@ -364,6 +417,12 @@ export function App() {
                     localStorage.setItem(ONBOARDING_KEY, '1');
                     setOnboardingOpen(false);
                 }}
+            />
+
+            <CommandPalette
+                onNewEntry={openNew}
+                onExport={doExport}
+                onQuickAdd={openQuickAdd}
             />
         </AppShell>
     );

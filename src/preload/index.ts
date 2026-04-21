@@ -54,6 +54,20 @@ export interface AgentProfile {
     autoImportThreshold: number;
 }
 
+export interface UserProfileDto {
+    fullName: string;
+    email: string;
+    phone: string;
+    signature: string;
+    cvPath: string;
+    smtpHost: string;
+    smtpPort: number;
+    smtpSecure: boolean;
+    smtpUser: string;
+    smtpPassword: string;
+    smtpFromName: string;
+}
+
 const api = {
     applications: {
         list: (): Promise<ApplicationRecord[]> => ipcRenderer.invoke('applications:list'),
@@ -127,6 +141,45 @@ const api = {
         }> => ipcRenderer.invoke('updater:checkNow'),
         installNow: () => ipcRenderer.invoke('updater:installNow'),
         currentVersion: (): Promise<{ version: string }> => ipcRenderer.invoke('updater:currentVersion'),
+    },
+    profile: {
+        get: (): Promise<UserProfileDto> => ipcRenderer.invoke('profile:get'),
+        set: (patch: Partial<UserProfileDto>): Promise<UserProfileDto> =>
+            ipcRenderer.invoke('profile:set', patch),
+        pickCv: (): Promise<{ canceled: boolean; path?: string }> =>
+            ipcRenderer.invoke('profile:pickCv'),
+        encryptionAvailable: (): Promise<boolean> =>
+            ipcRenderer.invoke('profile:encryptionAvailable'),
+    },
+    email: {
+        verify: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('email:verify'),
+        send: (req: {
+            to: string;
+            subject: string;
+            body: string;
+            attachCv?: boolean;
+        }): Promise<{ ok: boolean; messageId?: string; error?: string }> =>
+            ipcRenderer.invoke('email:send', req),
+    },
+    backup: {
+        create: (): Promise<{ ok: boolean; canceled?: boolean; filePath?: string; size?: number; error?: string }> =>
+            ipcRenderer.invoke('backup:create'),
+        restore: (): Promise<{ ok: boolean; canceled?: boolean; restoredFiles?: number; error?: string }> =>
+            ipcRenderer.invoke('backup:restore'),
+    },
+    chat: {
+        send: (req: {
+            messages: Array<{
+                role: 'system' | 'user' | 'assistant' | 'tool';
+                content: string;
+                name?: string;
+            }>;
+        }): Promise<{
+            messages: Array<{ role: string; content: string; name?: string }>;
+            reply: string;
+            toolsUsed: string[];
+            error?: string;
+        }> => ipcRenderer.invoke('chat:send', req),
     },
     shell: {
         openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),

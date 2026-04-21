@@ -1,15 +1,15 @@
 {
-    "name": "simple-application-tracker",
-    "version": "0.3.0",
-    "description": "Offline desktop app for tracking job applications with local LLM auto-fill, fit scoring, Excel export, and search agents across job portals",
+    "name": "pitch-tracker",
+    "version": "0.4.0",
+    "description": "Offline desktop app for tracking job applications with local LLM auto-fill, fit scoring, email sending, backup, AI assistant, analytics and background agents across job portals",
     "author": {
         "name": "Florian Chiorean",
         "email": "mail@florian-chiorean.de"
     },
-    "homepage": "https://github.com/unfloned/simple-application-tracker",
+    "homepage": "https://github.com/unfloned/pitch-tracker",
     "repository": {
         "type": "git",
-        "url": "https://github.com/unfloned/simple-application-tracker.git"
+        "url": "https://github.com/unfloned/pitch-tracker.git"
     },
     "license": "MIT",
     "main": "./out/main/index.js",
@@ -18,6 +18,8 @@
         "dev": "electron-vite dev",
         "build": "electron-vite build",
         "start": "electron-vite preview",
+        "test": "vitest run",
+        "test:watch": "vitest",
         "package:mac": "electron-vite build && electron-builder --mac --publish never",
         "package:win": "electron-vite build && electron-builder --win --publish never",
         "package:linux": "electron-vite build && electron-builder --linux --publish never",
@@ -26,25 +28,40 @@
         "postinstall": "electron-rebuild -f -w better-sqlite3 || true"
     },
     "dependencies": {
+        "@deepkit/core": "^1.0.19",
         "@deepkit/type": "^1.0.19",
+        "@mantine/charts": "^7.17.8",
         "@mantine/core": "^7.14.0",
         "@mantine/dates": "^7.14.0",
         "@mantine/form": "^7.14.0",
         "@mantine/hooks": "^7.14.0",
         "@mantine/notifications": "^7.14.0",
+        "@mantine/spotlight": "^7.14.0",
+        "@mantine/tiptap": "^7.14.0",
         "@tabler/icons-react": "^3.24.0",
+        "@tiptap/extension-link": "^2.9.1",
+        "@tiptap/extension-placeholder": "^2.9.1",
+        "@tiptap/pm": "^2.9.1",
+        "@tiptap/react": "^2.9.1",
+        "@tiptap/starter-kit": "^2.9.1",
+        "adm-zip": "^0.5.16",
         "better-sqlite3": "^11.6.0",
         "dayjs": "^1.11.13",
         "electron-store": "^8.2.0",
         "electron-updater": "^6.3.9",
         "exceljs": "^4.4.0",
         "i18next": "^23.16.8",
-        "react-i18next": "^15.1.3"
+        "nodemailer": "^6.9.15",
+        "react-i18next": "^15.1.3",
+        "react-router-dom": "^6.28.0",
+        "recharts": "^2.15.4"
     },
     "devDependencies": {
         "@electron/rebuild": "^3.7.0",
+        "@types/adm-zip": "^0.5.7",
         "@types/better-sqlite3": "^7.6.12",
         "@types/node": "^22.10.0",
+        "@types/nodemailer": "^6.4.17",
         "@types/react": "^18.3.12",
         "@types/react-dom": "^18.3.1",
         "@vitejs/plugin-react": "^4.3.4",
@@ -54,11 +71,12 @@
         "react": "^18.3.1",
         "react-dom": "^18.3.1",
         "typescript": "^5.6.3",
-        "vite": "^5.4.11"
+        "vite": "^5.4.11",
+        "vitest": "^4.1.5"
     },
     "build": {
-        "appId": "com.chiostudios.simple-application-tracker",
-        "productName": "Simple Application Tracker",
+        "appId": "com.chiostudios.pitch-tracker",
+        "productName": "Pitch Tracker",
         "copyright": "Copyright © 2026 Florian Chiorean",
         "directories": {
             "output": "release",
@@ -84,7 +102,10 @@
             "target": [
                 {
                     "target": "dmg",
-                    "arch": ["arm64", "x64"]
+                    "arch": [
+                        "arm64",
+                        "x64"
+                    ]
                 }
             ],
             "icon": "resources/icon.png",
@@ -93,13 +114,15 @@
             "identity": null
         },
         "dmg": {
-            "title": "Simple Application Tracker ${version}"
+            "title": "Pitch Tracker ${version}"
         },
         "win": {
             "target": [
                 {
                     "target": "nsis",
-                    "arch": ["x64"]
+                    "arch": [
+                        "x64"
+                    ]
                 }
             ],
             "icon": "resources/icon.png"
@@ -113,11 +136,15 @@
             "target": [
                 {
                     "target": "AppImage",
-                    "arch": ["x64"]
+                    "arch": [
+                        "x64"
+                    ]
                 },
                 {
                     "target": "deb",
-                    "arch": ["x64"]
+                    "arch": [
+                        "x64"
+                    ]
                 }
             ],
             "icon": "resources/icon.png",
@@ -126,7 +153,7 @@
         "publish": {
             "provider": "github",
             "owner": "unfloned",
-            "repo": "simple-application-tracker"
+            "repo": "pitch-tracker"
         }
     }
 }

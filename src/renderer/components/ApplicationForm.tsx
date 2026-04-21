@@ -24,6 +24,7 @@ import { useHotkeys } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import {
     IconAlertCircle,
+    IconSend,
     IconSparkles,
     IconTargetArrow,
     IconTrash,
@@ -37,6 +38,8 @@ import {
     STATUS_ORDER,
 } from '@shared/application';
 import type { ApplicationRecord } from '../../preload/index';
+import { EmailSendDialog } from './EmailSendDialog';
+import { RichTextNotes } from './RichTextNotes';
 import { StatusSelector } from './StatusSelector';
 
 interface Props {
@@ -124,6 +127,7 @@ export function ApplicationFormModal({
     const form = useForm<FormValues>({ initialValues: DEFAULTS });
     const [extracting, setExtracting] = useState(false);
     const [assessing, setAssessing] = useState(false);
+    const [emailOpened, setEmailOpened] = useState(false);
 
     useEffect(() => {
         if (!opened) return;
@@ -465,13 +469,16 @@ export function ApplicationFormModal({
                                         maxRows={8}
                                         {...form.getInputProps('jobDescription')}
                                     />
-                                    <Textarea
-                                        label={t('form.notes')}
-                                        autosize
-                                        minRows={2}
-                                        maxRows={8}
-                                        {...form.getInputProps('notes')}
-                                    />
+                                    <Stack gap={4}>
+                                        <Text size="sm" fw={500}>
+                                            {t('form.notes')}
+                                        </Text>
+                                        <RichTextNotes
+                                            value={form.values.notes}
+                                            onChange={(html) => form.setFieldValue('notes', html)}
+                                            minHeight={160}
+                                        />
+                                    </Stack>
                                     <TextInput
                                         label={t('form.tags')}
                                         placeholder={t('form.tagsPlaceholder')}
@@ -544,6 +551,15 @@ export function ApplicationFormModal({
                             )}
                         </div>
                         <Group>
+                            {initial && (
+                                <Button
+                                    variant="light"
+                                    leftSection={<IconSend size={16} />}
+                                    onClick={() => setEmailOpened(true)}
+                                >
+                                    {t('email.send')}
+                                </Button>
+                            )}
                             <Button variant="subtle" onClick={onClose}>
                                 {t('common.cancel')}
                             </Button>
@@ -554,6 +570,13 @@ export function ApplicationFormModal({
                     </Group>
                 </Stack>
             </form>
+            {initial && (
+                <EmailSendDialog
+                    opened={emailOpened}
+                    onClose={() => setEmailOpened(false)}
+                    application={initial}
+                />
+            )}
         </Drawer>
     );
 }

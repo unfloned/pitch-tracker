@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs';
 import { listApplications } from './db';
 import type { ApplicationStatus, Priority, RemoteType } from '@shared/application';
+import { stripHtml } from '@shared/html';
 
 export interface ExportLabels {
     status: Record<ApplicationStatus, string>;
@@ -39,7 +40,7 @@ export interface ExportLabels {
 export async function exportToExcel(filePath: string, labels: ExportLabels): Promise<number> {
     const applications = listApplications();
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Simple Application Tracker';
+    workbook.creator = 'Pitch Tracker';
     workbook.created = new Date();
 
     const sheet = workbook.addWorksheet(labels.sheetName);
@@ -86,6 +87,7 @@ export async function exportToExcel(filePath: string, labels: ExportLabels): Pro
             priority: labels.priority[app.priority] ?? app.priority,
             requiredProfile: app.requiredProfile.map((p) => `• ${p}`).join('\n'),
             benefits: app.benefits.map((b) => `• ${b}`).join('\n'),
+            notes: stripHtml(app.notes),
             appliedAt: app.appliedAt ? formatDate(app.appliedAt) : '',
             createdAt: formatDate(app.createdAt),
             updatedAt: formatDate(app.updatedAt),

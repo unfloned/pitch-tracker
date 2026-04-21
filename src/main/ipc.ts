@@ -1,5 +1,6 @@
-import { BrowserWindow, dialog, ipcMain, shell } from 'electron';
-import { join } from 'node:path';
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { copyFileSync, mkdirSync, existsSync } from 'node:fs';
+import { basename, extname, join } from 'node:path';
 import {
     createApplication,
     deleteApplication,
@@ -8,6 +9,15 @@ import {
     updateApplication,
 } from './db';
 import { exportToExcel, type ExportLabels } from './export';
+import {
+    getUserProfile,
+    isSmtpEncryptionAvailable,
+    setUserProfile,
+    type UserProfile,
+} from './profile';
+import { sendEmail, verifySmtp, type EmailSendRequest } from './email';
+import { createBackup, restoreBackup } from './backup';
+import { runChat, type ChatRequest } from './chat';
 import {
     assessFit,
     checkLlmStatus,
@@ -122,7 +132,7 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
         const result = await dialog.showSaveDialog({
             title: dialogTitle,
             defaultPath: join(
-                'Simple-Application-Tracker_' + new Date().toISOString().slice(0, 10) + '.xlsx',
+                'Pitch-Tracker_' + new Date().toISOString().slice(0, 10) + '.xlsx',
             ),
             filters: [{ name: 'Excel', extensions: ['xlsx'] }],
         });
@@ -134,6 +144,61 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     ipcMain.handle('shell:openExternal', async (_evt, url: string) => {
         await shell.openExternal(url);
         return { ok: true };
+    });
+
+    ipcMain.handle('profile:get', () => getUserProfile());
+    ipcMain.handle('profile:set', (_evt, patch: Partial<UserProfile>) => setUserProfile(patch));
+    ipcMain.handle('profile:encryptionAvailable', () => isSmtpEncryptionAvailable());
+    ipcMain.handle('profile:pickCv', async () => {
+        const result = await dialog.showOpenDialog({
+            title: 'Pick CV file',
+            properties: ['openFile'],
+            filters: [
+                { name: 'Documents', extensions: ['pdf', 'doc', 'docx', 'odt', 'rtf', 'txt'] },
+                { name: 'All files', extensions: ['*'] },
+            ],
+        });
+        if (result.canceled || result.filePaths.length === 0) return { canceled: true };
+        const source = result.filePaths[0];
+        try {
+            const cvDir = join(app.getPath('userData'), 'cv');
+            mkdirSync(cvDir, { recursive: true });
+            const ext = extname(source) || '.pdf';
+            const stored = join(cvDir, 'cv' + ext);
+            copyFileSync(source, stored);
+            setUserProfile({ cvPath: stored });
+            return { canceled: false, path: stored };
+        } catch (err) {
+            return { canceled: false, error: (err as Error).message };
+        }
+    });
+
+    ipcMain.handle('email:verify', async () => verifySmtp());
+    ipcMain.handle('email:send', async (_evt, req: EmailSendRequest) => sendEmail(req));
+
+    ipcMain.handle('backup:create', async () => {
+        const defaultName =
+            'tracker-backup_' + new Date().toISOString().slice(0, 10) + '.zip';
+        const result = await dialog.showSaveDialog({
+            title: 'Export backup',
+            defaultPath: defaultName,
+            filters: [{ name: 'ZIP archive', extensions: ['zip'] }],
+        });
+        if (result.canceled || !result.filePath) return { ok: false, canceled: true };
+        return createBackup(result.filePath);
+    });
+    ipcMain.handle('chat:send', async (_evt, req: ChatRequest) => runChat(req, getWindow()));
+
+    ipcMain.handle('backup:restore', async () => {
+        const result = await dialog.showOpenDialog({
+            title: 'Restore backup',
+            properties: ['openFile'],
+            filters: [{ name: 'ZIP archive', extensions: ['zip'] }],
+        });
+        if (result.canceled || result.filePaths.length === 0) {
+            return { ok: false, canceled: true };
+        }
+        return restoreBackup(result.filePaths[0]);
     });
 }
 

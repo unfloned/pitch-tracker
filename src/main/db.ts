@@ -89,6 +89,8 @@ let db: Database.Database | null = null;
 
 function migrateFromLegacyAppFolder(userDataPath: string): void {
     const legacyCandidates = [
+        join(userDataPath, '..', 'Simple Application Tracker'),
+        join(userDataPath, '..', 'simple-application-tracker'),
         join(userDataPath, '..', 'bewerbungen-tracker'),
         join(userDataPath, '..', 'Bewerbungen-Tracker'),
     ];
@@ -96,9 +98,21 @@ function migrateFromLegacyAppFolder(userDataPath: string): void {
     const targetDb = join(userDataPath, 'tracker.sqlite');
     if (existsSync(targetDb)) return;
 
+    const legacyFiles = [
+        'tracker.sqlite',
+        'tracker.sqlite-wal',
+        'tracker.sqlite-shm',
+        'agents.sqlite',
+        'agents.sqlite-wal',
+        'agents.sqlite-shm',
+        'config.json',
+        'agent-profile.json',
+        'user-profile.json',
+        'geocode-cache.json',
+    ];
+
     for (const legacyDir of legacyCandidates) {
         if (!existsSync(legacyDir)) continue;
-        const legacyFiles = ['tracker.sqlite', 'tracker.sqlite-wal', 'tracker.sqlite-shm', 'agents.sqlite', 'config.json', 'agent-profile.json'];
         let copied = 0;
         for (const file of legacyFiles) {
             const src = join(legacyDir, file);
@@ -109,6 +123,21 @@ function migrateFromLegacyAppFolder(userDataPath: string): void {
                 } catch (err) {
                     console.warn(`[migration] Copy ${file} failed:`, (err as Error).message);
                 }
+            }
+        }
+        const legacyCvDir = join(legacyDir, 'cv');
+        if (existsSync(legacyCvDir)) {
+            try {
+                const targetCvDir = join(userDataPath, 'cv');
+                if (!existsSync(targetCvDir)) {
+                    mkdirSync(targetCvDir, { recursive: true });
+                }
+                for (const entry of readdirSync(legacyCvDir)) {
+                    copyFileSync(join(legacyCvDir, entry), join(targetCvDir, entry));
+                    copied += 1;
+                }
+            } catch (err) {
+                console.warn('[migration] CV copy failed:', (err as Error).message);
             }
         }
         if (copied > 0) {
