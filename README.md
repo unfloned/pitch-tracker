@@ -6,7 +6,7 @@ Offline desktop app for tracking job applications. No cloud, no login, all data 
 ![electron](https://img.shields.io/badge/electron-33-47848f)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
-![Applications view](.github/screenshots/01-applications.png)
+![Inbox](.github/screenshots/01-inbox.png)
 
 ## Screenshots
 
