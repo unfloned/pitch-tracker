@@ -12,7 +12,7 @@ interface Config {
 const configStore = new Store<Config>({
     defaults: {
         ollamaUrl: 'http://localhost:11434',
-        ollamaModel: 'qwen2.5:7b-instruct',
+        ollamaModel: 'llama3.2:3b',
     },
 });
 

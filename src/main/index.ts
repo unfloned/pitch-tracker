@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { initDatabase } from './db';
 import { registerIpcHandlers } from './ipc';
 import { initAutoUpdater } from './updater';
-import { startAgentScheduler } from './agents';
+import { initAgentsDatabase, startAgentScheduler } from './agents';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -72,7 +72,8 @@ function createTray(): void {
 
 app.whenReady().then(() => {
     initDatabase();
-    registerIpcHandlers();
+    initAgentsDatabase();
+    registerIpcHandlers(() => mainWindow);
     createWindow();
     createTray();
     initAutoUpdater(() => mainWindow);

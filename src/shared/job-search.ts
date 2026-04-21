@@ -33,19 +33,25 @@ export const JOB_SOURCE_DESCRIPTION: Record<JobSource, string> = {
     url: 'Scrape a single job posting URL',
 };
 
-export interface JobSearch {
-    id: string;
-    label: string;
-    keywords: string;
-    sources: JobSource[];
-    locationFilter: string;
-    remoteOnly: boolean;
-    minSalary: number;
-    enabled: boolean;
-    lastRunAt: Date | null;
-    createdAt: Date;
-    updatedAt: Date;
-}
+export type ScheduleInterval = 'manual' | 'hourly' | '3h' | '6h' | '12h' | 'daily';
+
+export const INTERVAL_LABEL: Record<ScheduleInterval, string> = {
+    manual: 'Manual only',
+    hourly: 'Every hour',
+    '3h': 'Every 3 hours',
+    '6h': 'Every 6 hours',
+    '12h': 'Every 12 hours',
+    daily: 'Daily',
+};
+
+export const INTERVAL_MS: Record<ScheduleInterval, number> = {
+    manual: 0,
+    hourly: 60 * 60 * 1000,
+    '3h': 3 * 60 * 60 * 1000,
+    '6h': 6 * 60 * 60 * 1000,
+    '12h': 12 * 60 * 60 * 1000,
+    daily: 24 * 60 * 60 * 1000,
+};
 
 export interface JobSearchInput {
     label?: string;
@@ -55,36 +61,22 @@ export interface JobSearchInput {
     remoteOnly?: boolean;
     minSalary?: number;
     enabled?: boolean;
+    interval?: ScheduleInterval;
 }
 
 export type CandidateStatus = 'new' | 'interested' | 'ignored' | 'imported';
 
 export const CANDIDATE_STATUS_LABEL: Record<CandidateStatus, string> = {
-    new: 'Neu',
-    interested: 'Interessant',
-    ignored: 'Verworfen',
-    imported: 'Übernommen',
+    new: 'New',
+    interested: 'Interested',
+    ignored: 'Dismissed',
+    imported: 'Imported',
 };
-
-export interface JobCandidate {
-    id: string;
-    searchId: string;
-    sourceUrl: string;
-    sourceKey: string;
-    title: string;
-    company: string;
-    location: string;
-    summary: string;
-    score: number;
-    scoreReason: string;
-    status: CandidateStatus;
-    discoveredAt: Date;
-    importedApplicationId: string | null;
-}
 
 export interface JobCandidateInput {
     status?: CandidateStatus;
     importedApplicationId?: string | null;
+    favorite?: boolean;
 }
 
 export interface SerializedJobSearch {
@@ -96,11 +88,57 @@ export interface SerializedJobSearch {
     remoteOnly: boolean;
     minSalary: number;
     enabled: boolean;
+    interval: ScheduleInterval;
     lastRunAt: string | null;
+    nextRunAt: string | null;
     createdAt: string;
     updatedAt: string;
 }
 
-export interface SerializedJobCandidate extends Omit<JobCandidate, 'discoveredAt'> {
+export interface SerializedJobCandidate {
+    id: string;
+    searchId: string;
+    sourceUrl: string;
+    sourceKey: string;
+    dedupKey: string;
+    title: string;
+    company: string;
+    location: string;
+    summary: string;
+    score: number;
+    scoreReason: string;
+    status: CandidateStatus;
+    favorite: boolean;
     discoveredAt: string;
+    importedApplicationId: string | null;
+}
+
+export interface AgentRunRecord {
+    id: string;
+    searchId: string;
+    searchLabel: string;
+    startedAt: string;
+    finishedAt: string | null;
+    sources: JobSource[];
+    scanned: number;
+    added: number;
+    error: string | null;
+    canceled: boolean;
+}
+
+export interface AgentRunProgress {
+    searchId: string;
+    source: JobSource;
+    current: number;
+    total: number;
+    phase: 'fetching' | 'scoring' | 'done';
+}
+
+export interface AgentRunFinished {
+    searchId: string;
+    runId: string;
+    scanned: number;
+    added: number;
+    errors: string[];
+    canceled: boolean;
 }

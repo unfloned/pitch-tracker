@@ -27,13 +27,11 @@ import {
     IconTrash,
 } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ApplicationStatus,
-    PRIORITY_LABEL,
     Priority,
-    REMOTE_LABEL,
     RemoteType,
-    STATUS_LABEL,
     STATUS_ORDER,
 } from '@shared/application';
 import type { ApplicationRecord } from '../../preload/index';
@@ -109,6 +107,7 @@ function scoreColor(score: number): string {
 }
 
 export function ApplicationFormModal({ opened, onClose, initial, onSaved, onDelete }: Props) {
+    const { t } = useTranslation();
     const form = useForm<FormValues>({ initialValues: DEFAULTS });
     const [extracting, setExtracting] = useState(false);
     const [assessing, setAssessing] = useState(false);
@@ -132,7 +131,7 @@ export function ApplicationFormModal({ opened, onClose, initial, onSaved, onDele
     const doExtract = async () => {
         const url = form.values.jobUrl.trim();
         if (!url) {
-            notifications.show({ color: 'yellow', message: 'Bitte zuerst eine URL eintragen.' });
+            notifications.show({ color: 'yellow', message: t('notifications.enterUrlFirst') });
             return;
         }
         setExtracting(true);
@@ -148,15 +147,17 @@ export function ApplicationFormModal({ opened, onClose, initial, onSaved, onDele
                 salaryMax: data.salaryMax || v.salaryMax,
                 stack: data.stack || v.stack,
                 jobDescription: data.jobDescription || v.jobDescription,
-                requiredProfile: data.requiredProfile.length ? data.requiredProfile : v.requiredProfile,
+                requiredProfile: data.requiredProfile.length
+                    ? data.requiredProfile
+                    : v.requiredProfile,
                 benefits: data.benefits.length ? data.benefits : v.benefits,
                 source: data.source || v.source,
             }));
-            notifications.show({ color: 'green', message: 'Daten aus URL extrahiert.' });
+            notifications.show({ color: 'green', message: t('notifications.dataExtracted') });
         } catch (err) {
             notifications.show({
                 color: 'red',
-                title: 'LLM-Extraktion fehlgeschlagen',
+                title: t('notifications.extractFailed'),
                 message: (err as Error).message,
                 icon: <IconAlertCircle size={16} />,
                 autoClose: 8000,
@@ -174,7 +175,7 @@ export function ApplicationFormModal({ opened, onClose, initial, onSaved, onDele
             form.setFieldValue('matchReason', result.reason);
             notifications.show({
                 color: scoreColor(result.score),
-                title: `Passung: ${result.score}/100`,
+                title: t('form.fitCheckTitle', { score: result.score }),
                 message: result.reason,
                 icon: <IconTargetArrow size={16} />,
                 autoClose: 8000,
@@ -182,7 +183,7 @@ export function ApplicationFormModal({ opened, onClose, initial, onSaved, onDele
         } catch (err) {
             notifications.show({
                 color: 'red',
-                title: 'Passungsprüfung fehlgeschlagen',
+                title: t('notifications.fitCheckFailed'),
                 message: (err as Error).message,
                 autoClose: 8000,
             });
@@ -206,7 +207,7 @@ export function ApplicationFormModal({ opened, onClose, initial, onSaved, onDele
             onClose={onClose}
             title={
                 <Group gap="xs">
-                    <Text fw={600}>{initial ? 'Eintrag bearbeiten' : 'Neuer Eintrag'}</Text>
+                    <Text fw={600}>{initial ? t('form.editTitle') : t('form.newTitle')}</Text>
                     {form.values.matchScore > 0 && (
                         <Badge color={scoreColor(form.values.matchScore)} variant="light">
                             {form.values.matchScore}/100
@@ -222,158 +223,158 @@ export function ApplicationFormModal({ opened, onClose, initial, onSaved, onDele
             <form onSubmit={form.onSubmit(submit)}>
                 <Stack gap="md">
                     <Alert variant="light" color="accent" icon={<IconSparkles size={16} />}>
-                        URL einfügen → Auto-Fill → LLM extrahiert Firma, Titel, Stack, Profil, Benefits.
+                        {t('form.autoFillHint')}
                     </Alert>
 
                     <Group align="end">
                         <TextInput
-                            label="Job-URL"
+                            label={t('form.jobUrl')}
                             placeholder="https://..."
                             flex={1}
                             {...form.getInputProps('jobUrl')}
                         />
-                        <Tooltip label="Lokale LLM extrahiert Felder">
+                        <Tooltip label={t('form.autoFillTooltip')}>
                             <Button
                                 loading={extracting}
                                 onClick={doExtract}
                                 leftSection={<IconSparkles size={16} />}
                                 variant="light"
                             >
-                                Auto-Fill
+                                {t('form.autoFill')}
                             </Button>
                         </Tooltip>
                     </Group>
 
-                    <Divider label="Firma & Job" labelPosition="left" />
+                    <Divider label={t('form.companyAndJob')} labelPosition="left" />
                     <SimpleGrid cols={2} spacing="sm">
-                        <TextInput label="Firma" {...form.getInputProps('companyName')} />
+                        <TextInput label={t('form.company')} {...form.getInputProps('companyName')} />
                         <TextInput
-                            label="Firmen-Website"
+                            label={t('form.companyWebsite')}
                             placeholder="https://..."
                             {...form.getInputProps('companyWebsite')}
                         />
-                        <TextInput label="Jobtitel" {...form.getInputProps('jobTitle')} />
+                        <TextInput label={t('form.jobTitle')} {...form.getInputProps('jobTitle')} />
                         <TextInput
-                            label="Ort"
-                            placeholder="z.B. Berlin / leer bei Remote"
+                            label={t('form.location')}
+                            placeholder={t('form.locationPlaceholder')}
                             {...form.getInputProps('location')}
                         />
                         <Select
-                            label="Remote-Typ"
+                            label={t('form.remoteType')}
                             data={(['onsite', 'hybrid', 'remote'] as RemoteType[]).map((v) => ({
                                 value: v,
-                                label: REMOTE_LABEL[v],
+                                label: t(`remote.${v}`),
                             }))}
                             {...form.getInputProps('remote')}
                         />
-                        <TextInput label="Quelle (Portal)" {...form.getInputProps('source')} />
+                        <TextInput label={t('form.source')} {...form.getInputProps('source')} />
                     </SimpleGrid>
 
                     <TextInput
-                        label="Stack"
-                        placeholder="TypeScript, Next.js, Postgres"
+                        label={t('form.stack')}
+                        placeholder={t('form.stackPlaceholder')}
                         {...form.getInputProps('stack')}
                     />
 
-                    <Divider label="Anforderungen & Benefits" labelPosition="left" />
+                    <Divider label={t('form.requirementsAndBenefits')} labelPosition="left" />
                     <TagsInput
-                        label="Anforderungen an dich"
-                        description="Enter für neuen Eintrag, Komma trennt ebenfalls"
-                        placeholder="z.B. 3+ Jahre TypeScript"
+                        label={t('form.requiredProfile')}
+                        description={t('form.requiredProfileHint')}
+                        placeholder={t('form.requiredProfilePlaceholder')}
                         {...form.getInputProps('requiredProfile')}
                         clearable
                         splitChars={[',', ';']}
                     />
                     <TagsInput
-                        label="Benefits"
-                        description="Enter für neuen Eintrag"
-                        placeholder="z.B. 30 Tage Urlaub, Jobrad, Workation"
+                        label={t('form.benefits')}
+                        description={t('form.benefitsHint')}
+                        placeholder={t('form.benefitsPlaceholder')}
                         {...form.getInputProps('benefits')}
                         clearable
                         splitChars={[',', ';']}
                     />
 
-                    <Divider label="Gehalt & Status" labelPosition="left" />
+                    <Divider label={t('form.salaryAndStatus')} labelPosition="left" />
                     <SimpleGrid cols={4} spacing="sm">
                         <NumberInput
-                            label="Gehalt Min"
+                            label={t('form.salaryMin')}
                             min={0}
                             {...form.getInputProps('salaryMin')}
                         />
                         <NumberInput
-                            label="Gehalt Max"
+                            label={t('form.salaryMax')}
                             min={0}
                             {...form.getInputProps('salaryMax')}
                         />
                         <TextInput
-                            label="Währung"
+                            label={t('form.currency')}
                             maxLength={3}
                             {...form.getInputProps('salaryCurrency')}
                         />
                         <Select
-                            label="Priorität"
+                            label={t('form.priority')}
                             data={(['low', 'medium', 'high'] as Priority[]).map((v) => ({
                                 value: v,
-                                label: PRIORITY_LABEL[v],
+                                label: t(`priority.${v}`),
                             }))}
                             {...form.getInputProps('priority')}
                         />
                     </SimpleGrid>
                     <SimpleGrid cols={2} spacing="sm">
                         <Select
-                            label="Status"
-                            data={STATUS_ORDER.map((s) => ({ value: s, label: STATUS_LABEL[s] }))}
+                            label={t('form.statusLabel')}
+                            data={STATUS_ORDER.map((s) => ({ value: s, label: t(`status.${s}`) }))}
                             {...form.getInputProps('status')}
                         />
                         <DateInput
-                            label="Beworben am"
+                            label={t('form.appliedAt')}
                             clearable
                             valueFormat="DD.MM.YYYY"
                             {...form.getInputProps('appliedAt')}
                         />
                     </SimpleGrid>
 
-                    <Divider label="Kontakt" labelPosition="left" />
+                    <Divider label={t('form.contact')} labelPosition="left" />
                     <SimpleGrid cols={3} spacing="sm">
-                        <TextInput label="Name" {...form.getInputProps('contactName')} />
-                        <TextInput label="E-Mail" {...form.getInputProps('contactEmail')} />
-                        <TextInput label="Telefon" {...form.getInputProps('contactPhone')} />
+                        <TextInput label={t('form.contactName')} {...form.getInputProps('contactName')} />
+                        <TextInput label={t('form.contactEmail')} {...form.getInputProps('contactEmail')} />
+                        <TextInput label={t('form.contactPhone')} {...form.getInputProps('contactPhone')} />
                     </SimpleGrid>
 
-                    <Divider label="Beschreibung & Notizen" labelPosition="left" />
+                    <Divider label={t('form.descriptionAndNotes')} labelPosition="left" />
                     <Textarea
-                        label="Job-Beschreibung"
+                        label={t('form.jobDescription')}
                         autosize
                         minRows={2}
                         maxRows={8}
                         {...form.getInputProps('jobDescription')}
                     />
                     <Textarea
-                        label="Eigene Notizen"
+                        label={t('form.notes')}
                         autosize
                         minRows={2}
                         maxRows={8}
                         {...form.getInputProps('notes')}
                     />
                     <TextInput
-                        label="Tags (Komma-separiert)"
-                        placeholder="startup, remote-first, gut"
+                        label={t('form.tags')}
+                        placeholder={t('form.tagsPlaceholder')}
                         {...form.getInputProps('tags')}
                     />
 
-                    <Divider label="Passungs-Check" labelPosition="left" />
+                    <Divider label={t('form.fitCheck')} labelPosition="left" />
                     {form.values.matchScore > 0 ? (
                         <Alert
                             variant="light"
                             color={scoreColor(form.values.matchScore)}
                             icon={<IconTargetArrow size={16} />}
-                            title={`Passung: ${form.values.matchScore}/100`}
+                            title={t('form.fitCheckTitle', { score: form.values.matchScore })}
                         >
-                            {form.values.matchReason || 'Noch keine Begründung'}
+                            {form.values.matchReason || t('form.fitCheckNoReason')}
                         </Alert>
                     ) : (
                         <Text size="sm" c="dimmed">
-                            Noch nicht geprüft. Klick auf "Passung prüfen" unten.
+                            {t('form.fitCheckPending')}
                         </Text>
                     )}
                     <Button
@@ -383,7 +384,7 @@ export function ApplicationFormModal({ opened, onClose, initial, onSaved, onDele
                         leftSection={<IconTargetArrow size={16} />}
                         disabled={!form.values.companyName && !form.values.jobTitle}
                     >
-                        Passung prüfen (LLM)
+                        {t('form.runFitCheck')}
                     </Button>
 
                     <Group justify="space-between" mt="xl" pb="md">
@@ -394,21 +395,29 @@ export function ApplicationFormModal({ opened, onClose, initial, onSaved, onDele
                                     color="red"
                                     leftSection={<IconTrash size={16} />}
                                     onClick={() => {
-                                        if (confirm(`"${initial.companyName}" wirklich löschen?`)) {
+                                        if (
+                                            confirm(
+                                                t('confirm.deleteApplication', {
+                                                    name: initial.companyName,
+                                                }),
+                                            )
+                                        ) {
                                             onDelete(initial.id);
                                             onClose();
                                         }
                                     }}
                                 >
-                                    Löschen
+                                    {t('common.delete')}
                                 </Button>
                             )}
                         </div>
                         <Group>
                             <Button variant="subtle" onClick={onClose}>
-                                Abbrechen
+                                {t('common.cancel')}
                             </Button>
-                            <Button type="submit">{initial ? 'Speichern' : 'Anlegen'}</Button>
+                            <Button type="submit">
+                                {initial ? t('common.save') : t('common.create')}
+                            </Button>
                         </Group>
                     </Group>
                 </Stack>

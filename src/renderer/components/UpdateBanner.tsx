@@ -1,8 +1,10 @@
 import { Alert, Button, Group } from '@mantine/core';
 import { IconDownload, IconRefresh } from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export function UpdateBanner() {
+    const { t } = useTranslation();
     const [downloaded, setDownloaded] = useState<{ version: string } | null>(null);
     const [available, setAvailable] = useState<{ version: string } | null>(null);
 
@@ -24,18 +26,18 @@ export function UpdateBanner() {
             <Alert
                 color="green"
                 icon={<IconRefresh size={16} />}
-                title={`Update ${downloaded.version} bereit`}
+                title={t('updater.downloadedTitle', { version: downloaded.version })}
                 withCloseButton
                 onClose={() => setDownloaded(null)}
             >
                 <Group justify="space-between">
-                    <span>Installation beim nächsten Neustart — oder jetzt installieren.</span>
+                    <span>{t('updater.downloadedBody')}</span>
                     <Button
                         size="xs"
                         onClick={() => window.api.updater.installNow()}
                         leftSection={<IconRefresh size={14} />}
                     >
-                        Jetzt installieren
+                        {t('updater.installNow')}
                     </Button>
                 </Group>
             </Alert>
@@ -47,11 +49,11 @@ export function UpdateBanner() {
             <Alert
                 color="blue"
                 icon={<IconDownload size={16} />}
-                title={`Update ${available.version} verfügbar`}
+                title={t('updater.availableTitle', { version: available.version })}
                 withCloseButton
                 onClose={() => setAvailable(null)}
             >
-                Wird im Hintergrund heruntergeladen, Install-Hinweis folgt.
+                {t('updater.availableBody')}
             </Alert>
         );
     }

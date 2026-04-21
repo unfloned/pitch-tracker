@@ -1,5 +1,6 @@
 import { Badge } from '@mantine/core';
-import { ApplicationStatus, STATUS_LABEL } from '@shared/application';
+import { useTranslation } from 'react-i18next';
+import { ApplicationStatus } from '@shared/application';
 
 const COLORS: Record<ApplicationStatus, string> = {
     draft: 'gray',
@@ -14,9 +15,10 @@ const COLORS: Record<ApplicationStatus, string> = {
 };
 
 export function StatusBadge({ status }: { status: ApplicationStatus }) {
+    const { t } = useTranslation();
     return (
         <Badge color={COLORS[status]} variant="light" radius="sm">
-            {STATUS_LABEL[status]}
+            {t(`status.${status}`)}
         </Badge>
     );
 }

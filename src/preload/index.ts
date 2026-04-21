@@ -8,6 +8,7 @@ import type {
     RemoteType,
 } from '@shared/application';
 import type {
+    AgentRunRecord,
     JobSearchInput,
     SerializedJobCandidate,
     SerializedJobSearch,
@@ -49,6 +50,7 @@ export interface AgentProfile {
     remotePreferred: boolean;
     minSalary: number;
     antiStack: string;
+    autoImportThreshold: number;
 }
 
 const api = {
@@ -84,23 +86,36 @@ const api = {
             ipcRenderer.invoke('agents:updateSearch', id, input),
         deleteSearch: (id: string): Promise<{ ok: true }> =>
             ipcRenderer.invoke('agents:deleteSearch', id),
-        runSearch: (id: string): Promise<{ added: number; scored: number }> =>
+        runSearch: (id: string): Promise<{ added: number; scanned: number; errors: string[]; canceled: boolean }> =>
             ipcRenderer.invoke('agents:runSearch', id),
+        cancelRun: (id: string): Promise<{ canceled: boolean }> =>
+            ipcRenderer.invoke('agents:cancelRun', id),
+        isRunning: (id: string): Promise<boolean> => ipcRenderer.invoke('agents:isRunning', id),
+        runningSearches: (): Promise<string[]> => ipcRenderer.invoke('agents:runningSearches'),
         listCandidates: (minScore?: number): Promise<SerializedJobCandidate[]> =>
             ipcRenderer.invoke('agents:listCandidates', minScore),
         updateCandidate: (
             id: string,
-            input: { status?: CandidateStatus; importedApplicationId?: string | null },
+            input: { status?: CandidateStatus; importedApplicationId?: string | null; favorite?: boolean },
         ): Promise<SerializedJobCandidate> => ipcRenderer.invoke('agents:updateCandidate', id, input),
+        bulkUpdateCandidates: (
+            ids: string[],
+            input: { status?: CandidateStatus; favorite?: boolean },
+        ): Promise<number> => ipcRenderer.invoke('agents:bulkUpdateCandidates', ids, input),
         importCandidate: (id: string): Promise<ApplicationRecord> =>
             ipcRenderer.invoke('agents:importCandidate', id),
+        listRuns: (limit?: number): Promise<AgentRunRecord[]> =>
+            ipcRenderer.invoke('agents:listRuns', limit),
         getProfile: (): Promise<AgentProfile> => ipcRenderer.invoke('agents:getProfile'),
         setProfile: (profile: Partial<AgentProfile>): Promise<AgentProfile> =>
             ipcRenderer.invoke('agents:setProfile', profile),
     },
     export: {
-        excel: (): Promise<{ canceled: boolean; filePath?: string; count?: number }> =>
-            ipcRenderer.invoke('export:excel'),
+        excel: (
+            labels: unknown,
+            dialogTitle: string,
+        ): Promise<{ canceled: boolean; filePath?: string; count?: number }> =>
+            ipcRenderer.invoke('export:excel', labels, dialogTitle),
     },
     updater: {
         checkNow: (): Promise<{

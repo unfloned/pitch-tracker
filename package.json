@@ -1,7 +1,7 @@
 {
     "name": "simple-application-tracker",
-    "version": "0.1.0",
-    "description": "Offline-Tool zum Tracken von Jobbewerbungen — mit LLM-Auto-Fill, Excel-Export und Job-Such-Agents",
+    "version": "0.2.0",
+    "description": "Offline desktop app for tracking job applications with local LLM auto-fill, fit scoring, Excel export, and search agents across job portals",
     "author": {
         "name": "Florian Chiorean",
         "email": "mail@florian-chiorean.de"
@@ -113,6 +113,10 @@
             "target": [
                 {
                     "target": "AppImage",
+                    "arch": ["x64"]
+                },
+                {
+                    "target": "deb",
                     "arch": ["x64"]
                 }
             ],

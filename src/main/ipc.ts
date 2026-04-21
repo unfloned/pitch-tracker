@@ -1,4 +1,4 @@
-import { dialog, ipcMain, shell } from 'electron';
+import { BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { join } from 'node:path';
 import {
     createApplication,
@@ -7,7 +7,7 @@ import {
     listApplications,
     updateApplication,
 } from './db';
-import { exportToExcel } from './export';
+import { exportToExcel, type ExportLabels } from './export';
 import {
     assessFit,
     checkLlmStatus,
@@ -18,10 +18,15 @@ import {
     startOllama,
 } from './llm';
 import {
+    bulkUpdateCandidates,
+    cancelSearchRun,
     createSearch,
     deleteSearch,
     getAgentProfile,
+    isSearchRunning,
+    listAgentRuns,
     listCandidates,
+    listRunningSearches,
     listSearches,
     runSearchNow,
     setAgentProfile,
@@ -30,8 +35,12 @@ import {
 } from './agents';
 import type { ApplicationInput } from '@shared/application';
 
-export function registerIpcHandlers(): void {
-    // Applications
+export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void {
+    const sendEvent = (channel: string, payload: unknown) => {
+        const win = getWindow();
+        if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
+    };
+
     ipcMain.handle('applications:list', () => {
         return listApplications().map(serializeApplication);
     });
@@ -52,13 +61,8 @@ export function registerIpcHandlers(): void {
         return { ok: true };
     });
 
-    // LLM
-    ipcMain.handle('llm:extract', async (_evt, url: string) => {
-        return await extractJobData(url);
-    });
-    ipcMain.handle('llm:assessFit', async (_evt, input: ApplicationInput) => {
-        return await assessFit(input);
-    });
+    ipcMain.handle('llm:extract', async (_evt, url: string) => extractJobData(url));
+    ipcMain.handle('llm:assessFit', async (_evt, input: ApplicationInput) => assessFit(input));
     ipcMain.handle('llm:getConfig', async () => getLlmConfig());
     ipcMain.handle('llm:setConfig', async (_evt, config) => {
         setLlmConfig(config);
@@ -68,7 +72,6 @@ export function registerIpcHandlers(): void {
     ipcMain.handle('llm:start', async () => startOllama());
     ipcMain.handle('llm:pullModel', async (_evt, modelName: string) => pullModel(modelName));
 
-    // Agents — Searches
     ipcMain.handle('agents:listSearches', () => listSearches());
     ipcMain.handle('agents:createSearch', (_evt, input) => createSearch(input));
     ipcMain.handle('agents:updateSearch', (_evt, id: string, input) => updateSearch(id, input));
@@ -76,14 +79,21 @@ export function registerIpcHandlers(): void {
         deleteSearch(id);
         return { ok: true };
     });
-    ipcMain.handle('agents:runSearch', async (_evt, id: string) => await runSearchNow(id));
+    ipcMain.handle('agents:runSearch', async (_evt, id: string) =>
+        runSearchNow(id, { sendEvent }),
+    );
+    ipcMain.handle('agents:cancelRun', (_evt, id: string) => ({ canceled: cancelSearchRun(id) }));
+    ipcMain.handle('agents:isRunning', (_evt, id: string) => isSearchRunning(id));
+    ipcMain.handle('agents:runningSearches', () => listRunningSearches());
 
-    // Agents — Candidates
     ipcMain.handle('agents:listCandidates', (_evt, minScore?: number) =>
         listCandidates(minScore ?? 0),
     );
     ipcMain.handle('agents:updateCandidate', (_evt, id: string, input) =>
         updateCandidate(id, input),
+    );
+    ipcMain.handle('agents:bulkUpdateCandidates', (_evt, ids: string[], input) =>
+        bulkUpdateCandidates(ids, input),
     );
     ipcMain.handle('agents:importCandidate', (_evt, candidateId: string) => {
         const candidates = listCandidates();
@@ -95,8 +105,7 @@ export function registerIpcHandlers(): void {
             jobUrl: cand.sourceUrl,
             jobDescription: cand.summary,
             location: cand.location,
-            source: cand.sourceUrl.includes('germantechjobs') ? 'germantechjobs' : 'join',
-            notes: `Aus Agent-Vorschlag übernommen. LLM-Score: ${cand.score}/100 — ${cand.scoreReason}`,
+            notes: `From agent suggestion. LLM score: ${cand.score}/100 - ${cand.scoreReason}`,
             matchScore: cand.score,
             matchReason: cand.scoreReason,
         });
@@ -104,25 +113,24 @@ export function registerIpcHandlers(): void {
         return serializeApplication(newApp);
     });
 
-    // Agents — Profile
+    ipcMain.handle('agents:listRuns', (_evt, limit?: number) => listAgentRuns(limit ?? 30));
+
     ipcMain.handle('agents:getProfile', () => getAgentProfile());
     ipcMain.handle('agents:setProfile', (_evt, profile) => setAgentProfile(profile));
 
-    // Export
-    ipcMain.handle('export:excel', async () => {
+    ipcMain.handle('export:excel', async (_evt, labels: ExportLabels, dialogTitle: string) => {
         const result = await dialog.showSaveDialog({
-            title: 'Bewerbungen als Excel exportieren',
+            title: dialogTitle,
             defaultPath: join(
                 'Simple-Application-Tracker_' + new Date().toISOString().slice(0, 10) + '.xlsx',
             ),
             filters: [{ name: 'Excel', extensions: ['xlsx'] }],
         });
         if (result.canceled || !result.filePath) return { canceled: true };
-        const count = await exportToExcel(result.filePath);
+        const count = await exportToExcel(result.filePath, labels);
         return { canceled: false, filePath: result.filePath, count };
     });
 
-    // Shell
     ipcMain.handle('shell:openExternal', async (_evt, url: string) => {
         await shell.openExternal(url);
         return { ok: true };

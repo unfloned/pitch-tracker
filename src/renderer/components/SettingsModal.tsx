@@ -7,20 +7,26 @@ import {
     Drawer,
     Group,
     ScrollArea,
+    SegmentedControl,
     Stack,
     Text,
     TextInput,
+    useMantineColorScheme,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import {
     IconCheck,
     IconDownload,
     IconInfoCircle,
+    IconMoon,
     IconPlayerPlay,
     IconRefresh,
+    IconSun,
     IconX,
 } from '@tabler/icons-react';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { setLanguage, type Language } from '../i18n';
 
 interface Props {
     opened: boolean;
@@ -34,6 +40,8 @@ interface Status {
 }
 
 export function SettingsModal({ opened, onClose }: Props) {
+    const { t, i18n } = useTranslation();
+    const { colorScheme, setColorScheme } = useMantineColorScheme();
     const [ollamaUrl, setOllamaUrl] = useState('http://localhost:11434');
     const [ollamaModel, setOllamaModel] = useState('llama3.2:3b');
     const [saving, setSaving] = useState(false);
@@ -61,7 +69,7 @@ export function SettingsModal({ opened, onClose }: Props) {
         setSaving(true);
         await window.api.llm.setConfig({ ollamaUrl, ollamaModel });
         setSaving(false);
-        notifications.show({ color: 'green', message: 'Settings saved.' });
+        notifications.show({ color: 'green', message: t('settings.settingsSaved') });
         await refreshStatus();
     };
 
@@ -71,22 +79,22 @@ export function SettingsModal({ opened, onClose }: Props) {
         setStarting(false);
         await refreshStatus();
         if (result.started) {
+            const method =
+                result.method === 'already-running'
+                    ? t('settings.ollamaAlreadyRunning')
+                    : result.method === 'app'
+                      ? t('settings.ollamaStartedApp')
+                      : t('settings.ollamaStartedCli');
             notifications.show({
                 color: 'green',
                 icon: <IconCheck size={16} />,
-                message: `Ollama running (${
-                    result.method === 'already-running'
-                        ? 'already on'
-                        : result.method === 'app'
-                          ? 'desktop app'
-                          : 'CLI'
-                }).`,
+                message: t('settings.ollamaStartedRunning', { method }),
             });
         } else {
             notifications.show({
                 color: 'red',
                 icon: <IconX size={16} />,
-                title: 'Ollama could not start',
+                title: t('settings.ollamaStartFailed'),
                 message: result.message ?? 'Unknown error',
                 autoClose: 10000,
             });
@@ -98,8 +106,8 @@ export function SettingsModal({ opened, onClose }: Props) {
         notifications.show({
             id: 'pulling',
             loading: true,
-            title: `Downloading ${ollamaModel}`,
-            message: 'Takes 2-10 minutes depending on model size.',
+            title: t('settings.downloadingTitle', { model: ollamaModel }),
+            message: t('settings.downloadingHint'),
             autoClose: false,
             withCloseButton: false,
         });
@@ -107,12 +115,15 @@ export function SettingsModal({ opened, onClose }: Props) {
         setPulling(false);
         notifications.hide('pulling');
         if (result.ok) {
-            notifications.show({ color: 'green', message: `${ollamaModel} downloaded.` });
+            notifications.show({
+                color: 'green',
+                message: t('settings.modelDownloaded', { model: ollamaModel }),
+            });
             await refreshStatus();
         } else {
             notifications.show({
                 color: 'red',
-                title: 'Download failed',
+                title: t('settings.downloadFailed'),
                 message: result.message ?? 'Unknown error',
             });
         }
@@ -121,14 +132,16 @@ export function SettingsModal({ opened, onClose }: Props) {
     const checkUpdate = async () => {
         const result = await window.api.updater.checkNow();
         if (result.dev) {
-            notifications.show({ message: 'Dev mode: skipping update check.' });
+            notifications.show({ message: t('settings.devSkip') });
         } else if (result.updateAvailable) {
             notifications.show({
                 color: 'blue',
-                message: `Update ${result.remoteVersion} available, downloading.`,
+                message: t('settings.updateAvailableNotify', { version: result.remoteVersion }),
             });
         } else {
-            notifications.show({ message: `You are on ${result.currentVersion} (latest).` });
+            notifications.show({
+                message: t('settings.onLatest', { version: result.currentVersion }),
+            });
         }
     };
 
@@ -140,37 +153,81 @@ export function SettingsModal({ opened, onClose }: Props) {
             onClose={onClose}
             position="right"
             size="md"
-            title="Settings"
+            title={t('settings.title')}
             scrollAreaComponent={ScrollArea.Autosize}
         >
             <Stack gap="md">
-                <Divider label="Ollama (Local LLM)" labelPosition="left" />
+                <Divider label={t('settings.appearance')} labelPosition="left" />
+                <Group justify="space-between">
+                    <Text fw={500}>{t('settings.theme')}</Text>
+                    <SegmentedControl
+                        value={colorScheme}
+                        onChange={(v) => setColorScheme(v as 'light' | 'dark' | 'auto')}
+                        data={[
+                            {
+                                value: 'light',
+                                label: (
+                                    <span style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                        <IconSun size={14} /> {t('settings.themeLight')}
+                                    </span>
+                                ),
+                            },
+                            {
+                                value: 'dark',
+                                label: (
+                                    <span style={{ whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                        <IconMoon size={14} /> {t('settings.themeDark')}
+                                    </span>
+                                ),
+                            },
+                            {
+                                value: 'auto',
+                                label: <span style={{ whiteSpace: 'nowrap' }}>{t('settings.themeSystem')}</span>,
+                            },
+                        ]}
+                        size="xs"
+                    />
+                </Group>
+
+                <Group justify="space-between">
+                    <Text fw={500}>{t('settings.language')}</Text>
+                    <SegmentedControl
+                        value={i18n.language.startsWith('de') ? 'de' : 'en'}
+                        onChange={(v) => setLanguage(v as Language)}
+                        data={[
+                            { value: 'de', label: t('settings.languageGerman') },
+                            { value: 'en', label: t('settings.languageEnglish') },
+                        ]}
+                        size="xs"
+                    />
+                </Group>
+
+                <Divider label={t('settings.ollamaSection')} labelPosition="left" />
 
                 <Group justify="space-between" align="center">
-                    <Text fw={500}>Status</Text>
+                    <Text fw={500}>{t('settings.status')}</Text>
                     {status === null ? (
-                        <Badge color="gray">Checking...</Badge>
+                        <Badge color="gray">{t('settings.statusChecking')}</Badge>
                     ) : status.running ? (
                         <Badge color="green" leftSection={<IconCheck size={12} />}>
-                            Running
+                            {t('settings.statusRunning')}
                         </Badge>
                     ) : (
                         <Badge color="red" leftSection={<IconX size={12} />}>
-                            Offline
+                            {t('settings.statusOffline')}
                         </Badge>
                     )}
                 </Group>
 
                 {status && !status.running && (
                     <Alert variant="light" color="yellow" icon={<IconInfoCircle size={16} />}>
-                        Ollama not responding on <Code>{ollamaUrl}</Code>. Click "Start" below or run{' '}
-                        <Code>ollama serve</Code> in a terminal.
+                        {t('settings.ollamaOfflineHint', { url: ollamaUrl })}
                     </Alert>
                 )}
 
                 {status?.running && status.models.length > 0 && (
                     <Text size="xs" c="dimmed">
-                        Installed models: {status.models.join(', ')}
+                        {t('settings.installedModels', { models: status.models.join(', ') })}
                     </Text>
                 )}
 
@@ -180,7 +237,7 @@ export function SettingsModal({ opened, onClose }: Props) {
                         leftSection={<IconRefresh size={16} />}
                         onClick={refreshStatus}
                     >
-                        Refresh
+                        {t('common.refresh')}
                     </Button>
                     {!status?.running && (
                         <Button
@@ -188,7 +245,7 @@ export function SettingsModal({ opened, onClose }: Props) {
                             onClick={doStart}
                             loading={starting}
                         >
-                            Start Ollama
+                            {t('settings.startOllama')}
                         </Button>
                     )}
                     {status?.running && !hasModel && (
@@ -198,38 +255,37 @@ export function SettingsModal({ opened, onClose }: Props) {
                             onClick={doPull}
                             loading={pulling}
                         >
-                            Download model
+                            {t('settings.downloadModel')}
                         </Button>
                     )}
                 </Group>
 
                 <Alert variant="light" icon={<IconInfoCircle size={16} />}>
-                    Install: <Code>brew install ollama</Code> or the desktop app from{' '}
-                    <Code>ollama.com</Code>.
+                    {t('settings.installHint')}
                 </Alert>
 
                 <TextInput
-                    label="Ollama API URL"
+                    label={t('settings.ollamaUrl')}
                     placeholder="http://localhost:11434"
                     value={ollamaUrl}
                     onChange={(e) => setOllamaUrl(e.currentTarget.value)}
                 />
 
                 <TextInput
-                    label="Ollama model"
+                    label={t('settings.ollamaModel')}
                     placeholder="llama3.2:3b"
-                    description="Recommended: llama3.2:3b (fast) or qwen2.5:7b-instruct (higher quality)"
+                    description={t('settings.ollamaModelHint')}
                     value={ollamaModel}
                     onChange={(e) => setOllamaModel(e.currentTarget.value)}
                 />
 
                 <Button onClick={save} loading={saving}>
-                    Save
+                    {t('settings.save')}
                 </Button>
 
-                <Divider label="App" labelPosition="left" />
+                <Divider label={t('settings.app')} labelPosition="left" />
                 <Group justify="space-between">
-                    <Text size="sm">Version</Text>
+                    <Text size="sm">{t('settings.version')}</Text>
                     <Code>{version || '...'}</Code>
                 </Group>
                 <Button
@@ -237,7 +293,7 @@ export function SettingsModal({ opened, onClose }: Props) {
                     leftSection={<IconRefresh size={16} />}
                     onClick={checkUpdate}
                 >
-                    Check for update
+                    {t('settings.checkForUpdate')}
                 </Button>
             </Stack>
         </Drawer>
