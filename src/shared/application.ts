@@ -80,6 +80,7 @@ export class Application {
 
     requiredProfile: string[] = [];
     benefits: string[] = [];
+    interviews: string[] = [];
     matchScore: number = 0;
     matchReason: string = '';
 
@@ -110,6 +111,7 @@ export interface ApplicationInput {
     priority?: Priority;
     requiredProfile?: string[];
     benefits?: string[];
+    interviews?: string[];
     matchScore?: number;
     matchReason?: string;
     source?: string;

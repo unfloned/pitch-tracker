@@ -39,6 +39,7 @@ import {
     IconPlayerPlay,
     IconPlayerStop,
     IconPlus,
+    IconSearch,
     IconSettings,
     IconStar,
     IconStarFilled,
@@ -104,6 +105,12 @@ export function JobSearchesPage({ onCandidateImported }: Props) {
     const [logOpen, setLogOpen] = useState(false);
     const [editing, setEditing] = useState<SerializedJobSearch | null>(null);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const [sourceFilter, setSourceFilter] = useState<string[]>([]);
+    const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'favorite' | 'imported'>('all');
+    const [sortBy, setSortBy] = useState<'score_desc' | 'score_asc' | 'date_desc' | 'company_asc'>(
+        'score_desc',
+    );
+    const [searchText, setSearchText] = useState('');
 
     const refreshSearches = useCallback(async () => {
         const s = await window.api.agents.listSearches();
@@ -177,10 +184,34 @@ export function JobSearchesPage({ onCandidateImported }: Props) {
         await window.api.agents.cancelRun(id);
     };
 
-    const filteredCandidates = useMemo(
-        () => candidates.filter((c) => c.score >= minScore && c.status !== 'ignored'),
-        [candidates, minScore],
-    );
+    const filteredCandidates = useMemo(() => {
+        const q = searchText.toLowerCase().trim();
+        let list = candidates.filter((c) => {
+            if (c.score < minScore) return false;
+            if (statusFilter === 'new' && c.status !== 'new') return false;
+            if (statusFilter === 'favorite' && !c.favorite) return false;
+            if (statusFilter === 'imported' && c.status !== 'imported') return false;
+            if (statusFilter === 'all' && c.status === 'ignored') return false;
+            if (sourceFilter.length > 0) {
+                const matches = sourceFilter.some((src) => c.sourceKey.startsWith(src + ':'));
+                if (!matches) return false;
+            }
+            if (q) {
+                const blob = `${c.company} ${c.title} ${c.location}`.toLowerCase();
+                if (!blob.includes(q)) return false;
+            }
+            return true;
+        });
+        list = [...list].sort((a, b) => {
+            if (sortBy === 'score_desc') return b.score - a.score;
+            if (sortBy === 'score_asc') return a.score - b.score;
+            if (sortBy === 'date_desc')
+                return new Date(b.discoveredAt).getTime() - new Date(a.discoveredAt).getTime();
+            if (sortBy === 'company_asc') return (a.company || '').localeCompare(b.company || '');
+            return 0;
+        });
+        return list;
+    }, [candidates, minScore, statusFilter, sourceFilter, sortBy, searchText]);
 
     const toggleSelect = (id: string) => {
         setSelectedIds((prev) => {
@@ -387,43 +418,84 @@ export function JobSearchesPage({ onCandidateImported }: Props) {
                 )}
             </SimpleGrid>
 
-            <Group justify="space-between" align="end">
-                <Title order={4}>{t('candidates.matchesTitle')}</Title>
-                <Group>
-                    {selectedIds.size > 0 && (
-                        <>
-                            <Text size="xs" c="dimmed">
-                                {t('candidates.selected', { count: selectedIds.size })}
-                            </Text>
-                            <Button
-                                size="xs"
-                                variant="light"
-                                leftSection={<IconStar size={14} />}
-                                onClick={bulkFavorite}
-                            >
-                                {t('candidates.star')}
-                            </Button>
-                            <Button
-                                size="xs"
-                                variant="light"
-                                color="gray"
-                                leftSection={<IconEyeOff size={14} />}
-                                onClick={bulkIgnore}
-                            >
-                                {t('candidates.dismiss')}
-                            </Button>
-                        </>
-                    )}
-                    <NumberInput
-                        label={t('candidates.minScore')}
-                        value={minScore}
-                        onChange={(v) => setMinScore(Number(v) || 0)}
-                        min={0}
-                        max={100}
-                        w={140}
-                    />
-                </Group>
+            <Title order={4}>{t('candidates.matchesTitle')}</Title>
+
+            <Group gap="sm" wrap="wrap">
+                <TextInput
+                    leftSection={<IconSearch size={14} />}
+                    placeholder={t('candidates.filterSearchPlaceholder')}
+                    value={searchText}
+                    onChange={(e) => setSearchText(e.currentTarget.value)}
+                    style={{ flex: 1, minWidth: 200 }}
+                />
+                <MultiSelect
+                    placeholder={t('candidates.filterSource')}
+                    data={ALL_JOB_SOURCES.map((s) => ({ value: s, label: t(`source.${s}`) }))}
+                    value={sourceFilter}
+                    onChange={setSourceFilter}
+                    clearable
+                    w={200}
+                />
+                <Select
+                    placeholder={t('candidates.filterStatus')}
+                    data={[
+                        { value: 'all', label: t('candidates.filterStatusAll') },
+                        { value: 'new', label: t('candidates.filterStatusNew') },
+                        { value: 'favorite', label: t('candidates.filterStatusFavorite') },
+                        { value: 'imported', label: t('candidates.filterStatusImported') },
+                    ]}
+                    value={statusFilter}
+                    onChange={(v) => v && setStatusFilter(v as typeof statusFilter)}
+                    w={150}
+                    allowDeselect={false}
+                />
+                <Select
+                    placeholder={t('candidates.sortBy')}
+                    data={[
+                        { value: 'score_desc', label: t('candidates.sortByScore') },
+                        { value: 'score_asc', label: t('candidates.sortByScoreAsc') },
+                        { value: 'date_desc', label: t('candidates.sortByDate') },
+                        { value: 'company_asc', label: t('candidates.sortByCompany') },
+                    ]}
+                    value={sortBy}
+                    onChange={(v) => v && setSortBy(v as typeof sortBy)}
+                    w={200}
+                    allowDeselect={false}
+                />
+                <NumberInput
+                    value={minScore}
+                    onChange={(v) => setMinScore(Number(v) || 0)}
+                    min={0}
+                    max={100}
+                    w={110}
+                    placeholder={t('candidates.minScore')}
+                />
             </Group>
+
+            {selectedIds.size > 0 && (
+                <Group justify="flex-end">
+                    <Text size="xs" c="dimmed">
+                        {t('candidates.selected', { count: selectedIds.size })}
+                    </Text>
+                    <Button
+                        size="xs"
+                        variant="light"
+                        leftSection={<IconStar size={14} />}
+                        onClick={bulkFavorite}
+                    >
+                        {t('candidates.star')}
+                    </Button>
+                    <Button
+                        size="xs"
+                        variant="light"
+                        color="gray"
+                        leftSection={<IconEyeOff size={14} />}
+                        onClick={bulkIgnore}
+                    >
+                        {t('candidates.dismiss')}
+                    </Button>
+                </Group>
+            )}
 
             {loading ? (
                 <Center py="md">
@@ -778,6 +850,10 @@ function AgentProfileDrawer({ opened, onClose }: { opened: boolean; onClose: () 
     const [profile, setProfile] = useState<AgentProfile | null>(null);
     const [stackTags, setStackTags] = useState<string[]>([]);
     const [antiTags, setAntiTags] = useState<string[]>([]);
+    const [salaryEnabled, setSalaryEnabled] = useState(false);
+    const [autoImportEnabled, setAutoImportEnabled] = useState(false);
+    const [salaryValue, setSalaryValue] = useState(60000);
+    const [autoImportValue, setAutoImportValue] = useState(85);
 
     useEffect(() => {
         if (!opened) return;
@@ -785,6 +861,10 @@ function AgentProfileDrawer({ opened, onClose }: { opened: boolean; onClose: () 
             setProfile(p);
             setStackTags(splitToList(p.stackKeywords));
             setAntiTags(splitToList(p.antiStack));
+            setSalaryEnabled(p.minSalary > 0);
+            setSalaryValue(p.minSalary > 0 ? p.minSalary : 60000);
+            setAutoImportEnabled(p.autoImportThreshold > 0);
+            setAutoImportValue(p.autoImportThreshold > 0 ? p.autoImportThreshold : 85);
         });
     }, [opened]);
 
@@ -794,6 +874,8 @@ function AgentProfileDrawer({ opened, onClose }: { opened: boolean; onClose: () 
             ...profile,
             stackKeywords: stackTags.join(', '),
             antiStack: antiTags.join(', '),
+            minSalary: salaryEnabled ? salaryValue : 0,
+            autoImportThreshold: autoImportEnabled ? autoImportValue : 0,
         });
         notifications.show({ color: 'green', message: t('notifications.profileSaved') });
         onClose();
@@ -843,27 +925,56 @@ function AgentProfileDrawer({ opened, onClose }: { opened: boolean; onClose: () 
                             setProfile({ ...profile, remotePreferred: e.currentTarget.checked })
                         }
                     />
-                    <NumberInput
-                        label={t('profileDrawer.minSalary')}
-                        description={t('profileDrawer.minSalaryHint')}
-                        min={0}
-                        step={5000}
-                        value={profile.minSalary}
-                        onChange={(v) => setProfile({ ...profile, minSalary: Number(v) || 0 })}
-                    />
+                    <Group justify="space-between" align="center">
+                        <div style={{ flex: 1 }}>
+                            <Text size="sm" fw={500}>
+                                {t('profileDrawer.minSalaryToggle')}
+                            </Text>
+                            <Text size="xs" c="dimmed">
+                                {t('profileDrawer.minSalaryToggleHint')}
+                            </Text>
+                        </div>
+                        <Switch
+                            checked={salaryEnabled}
+                            onChange={(e) => setSalaryEnabled(e.currentTarget.checked)}
+                        />
+                    </Group>
+                    {salaryEnabled && (
+                        <NumberInput
+                            label={t('profileDrawer.minSalary')}
+                            min={0}
+                            step={5000}
+                            value={salaryValue}
+                            onChange={(v) => setSalaryValue(Number(v) || 0)}
+                        />
+                    )}
 
                     <Divider label={t('profileDrawer.automation')} labelPosition="left" />
-                    <NumberInput
-                        label={t('profileDrawer.autoImportThreshold')}
-                        description={t('profileDrawer.autoImportHint')}
-                        min={0}
-                        max={100}
-                        step={5}
-                        value={profile.autoImportThreshold}
-                        onChange={(v) =>
-                            setProfile({ ...profile, autoImportThreshold: Number(v) || 0 })
-                        }
-                    />
+                    <Group justify="space-between" align="center">
+                        <div style={{ flex: 1 }}>
+                            <Text size="sm" fw={500}>
+                                {t('profileDrawer.autoImportToggle')}
+                            </Text>
+                            <Text size="xs" c="dimmed">
+                                {t('profileDrawer.autoImportToggleHint')}
+                            </Text>
+                        </div>
+                        <Switch
+                            checked={autoImportEnabled}
+                            onChange={(e) => setAutoImportEnabled(e.currentTarget.checked)}
+                        />
+                    </Group>
+                    {autoImportEnabled && (
+                        <NumberInput
+                            label={t('profileDrawer.autoImportThreshold')}
+                            description={t('profileDrawer.autoImportHint')}
+                            min={1}
+                            max={100}
+                            step={5}
+                            value={autoImportValue}
+                            onChange={(v) => setAutoImportValue(Number(v) || 1)}
+                        />
+                    )}
 
                     <Group justify="flex-end" mt="md">
                         <Button variant="subtle" onClick={onClose}>

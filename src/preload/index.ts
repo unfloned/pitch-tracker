@@ -37,6 +37,7 @@ export interface ApplicationRecord {
     priority: Priority;
     requiredProfile: string[];
     benefits: string[];
+    interviews: string[];
     matchScore: number;
     matchReason: string;
     source: string;

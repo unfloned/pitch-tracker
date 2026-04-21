@@ -1,9 +1,10 @@
-import { app, BrowserWindow, Menu, nativeImage, Tray } from 'electron';
+import { app, BrowserWindow, clipboard, globalShortcut, Menu, nativeImage, Tray } from 'electron';
 import { join } from 'node:path';
 import { initDatabase } from './db';
 import { registerIpcHandlers } from './ipc';
 import { initAutoUpdater } from './updater';
-import { initAgentsDatabase, startAgentScheduler } from './agents';
+import { initAgentsDatabase, listCandidates, startAgentScheduler } from './agents';
+import { startFollowUpReminder } from './reminders';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
@@ -49,25 +50,66 @@ function openNewEntry(): void {
     mainWindow?.webContents.send('navigate', 'new');
 }
 
+function openQuickAddFromClipboard(): void {
+    const clip = clipboard.readText()?.trim() ?? '';
+    const url = /^https?:\/\//i.test(clip) ? clip : '';
+    createWindow();
+    mainWindow?.show();
+    mainWindow?.focus();
+    mainWindow?.webContents.send('navigate:quickAdd', { url });
+}
+
+function refreshTrayMenu(): void {
+    if (!tray) return;
+    const candidates = safeListCandidates().slice(0, 5);
+    const candidateItems: Electron.MenuItemConstructorOptions[] = candidates.length
+        ? candidates.map((c) => ({
+              label: `${c.score >= 50 ? '★ ' : ''}${(c.title || 'Untitled').slice(0, 60)}${c.company ? ' - ' + c.company.slice(0, 30) : ''}`,
+              click: () => {
+                  if (c.sourceUrl) {
+                      import('electron').then(({ shell }) => shell.openExternal(c.sourceUrl));
+                  }
+              },
+          }))
+        : [{ label: 'No candidates yet', enabled: false }];
+
+    const menu = Menu.buildFromTemplate([
+        { label: 'New entry', accelerator: 'CommandOrControl+N', click: openNewEntry },
+        {
+            label: 'Quick add from clipboard',
+            accelerator: 'CommandOrControl+Shift+N',
+            click: openQuickAddFromClipboard,
+        },
+        { label: 'Open tracker', click: () => createWindow() },
+        { type: 'separator' },
+        { label: 'Latest candidates', submenu: candidateItems },
+        { type: 'separator' },
+        { label: 'Quit', role: 'quit' },
+    ]);
+    tray.setContextMenu(menu);
+}
+
+function safeListCandidates() {
+    try {
+        return listCandidates(0);
+    } catch {
+        return [];
+    }
+}
+
 function createTray(): void {
     const iconPath = join(__dirname, '../../resources/tray-icon.png');
     const image = nativeImage.createFromPath(iconPath);
     if (image.isEmpty()) {
-        console.warn('[tray] Icon nicht gefunden unter', iconPath, '— überspringe Tray.');
+        console.warn('[tray] Icon not found at', iconPath, '- skipping tray.');
         return;
     }
     image.setTemplateImage(true);
     tray = new Tray(image);
     tray.setToolTip('Simple Application Tracker');
-
-    const menu = Menu.buildFromTemplate([
-        { label: 'Neuer Eintrag', click: openNewEntry },
-        { label: 'Alle Bewerbungen', click: () => createWindow() },
-        { type: 'separator' },
-        { label: 'Beenden', role: 'quit' },
-    ]);
-    tray.setContextMenu(menu);
+    refreshTrayMenu();
     tray.on('click', () => createWindow());
+    setInterval(refreshTrayMenu, 60 * 1000);
 }
 
 app.whenReady().then(() => {
@@ -78,10 +120,17 @@ app.whenReady().then(() => {
     createTray();
     initAutoUpdater(() => mainWindow);
     startAgentScheduler(() => mainWindow);
+    startFollowUpReminder(() => mainWindow);
+
+    globalShortcut.register('CommandOrControl+Shift+N', openQuickAddFromClipboard);
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
+});
+
+app.on('will-quit', () => {
+    globalShortcut.unregisterAll();
 });
 
 app.on('window-all-closed', () => {

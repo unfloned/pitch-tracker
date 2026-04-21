@@ -2,6 +2,7 @@ import {
     ActionIcon,
     Badge,
     Box,
+    Button,
     Center,
     Group,
     Loader,
@@ -12,13 +13,18 @@ import {
     Text,
     TextInput,
     Tooltip,
+    UnstyledButton,
 } from '@mantine/core';
 import {
     IconBuildingStore,
+    IconChevronDown,
+    IconChevronUp,
     IconDotsVertical,
     IconExternalLink,
     IconMapPin,
+    IconPlus,
     IconSearch,
+    IconSelector,
     IconTargetArrow,
     IconTrash,
 } from '@tabler/icons-react';
@@ -34,6 +40,8 @@ interface Props {
     onDelete: (id: string) => void;
     onStatusChange: (id: string, status: ApplicationStatus) => void;
     onVisibleCountChange?: (count: number) => void;
+    onNew: () => void;
+    searchInputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
 const STATUS_COLOR: Record<ApplicationStatus, string> = {
@@ -47,6 +55,9 @@ const STATUS_COLOR: Record<ApplicationStatus, string> = {
     rejected: 'red',
     withdrawn: 'dark',
 };
+
+type SortField = 'status' | 'matchScore' | 'companyName' | 'location' | 'salaryMax' | 'updatedAt';
+type SortDir = 'asc' | 'desc';
 
 function scoreColor(score: number): string {
     if (score >= 90) return 'teal';
@@ -63,6 +74,38 @@ function formatSalary(min: number, max: number, currency: string): string {
     return `${((min || max) / 1000).toFixed(0)}k ${c}`;
 }
 
+function SortableHeader({
+    field,
+    active,
+    direction,
+    onToggle,
+    children,
+    style,
+}: {
+    field: SortField;
+    active: boolean;
+    direction: SortDir;
+    onToggle: (field: SortField) => void;
+    children: React.ReactNode;
+    style?: React.CSSProperties;
+}) {
+    const Icon = !active ? IconSelector : direction === 'asc' ? IconChevronUp : IconChevronDown;
+    return (
+        <Table.Th style={style}>
+            <UnstyledButton
+                onClick={() => onToggle(field)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontWeight: 600 }}
+            >
+                {children}
+                <Icon
+                    size={14}
+                    style={{ opacity: active ? 1 : 0.35 }}
+                />
+            </UnstyledButton>
+        </Table.Th>
+    );
+}
+
 export function ApplicationList({
     rows,
     loading,
@@ -70,14 +113,27 @@ export function ApplicationList({
     onDelete,
     onStatusChange,
     onVisibleCountChange,
+    onNew,
+    searchInputRef,
 }: Props) {
     const { t } = useTranslation();
     const [query, setQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
+    const [sortField, setSortField] = useState<SortField>('updatedAt');
+    const [sortDir, setSortDir] = useState<SortDir>('desc');
+
+    const toggleSort = (field: SortField) => {
+        if (field === sortField) {
+            setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+        } else {
+            setSortField(field);
+            setSortDir(field === 'matchScore' || field === 'updatedAt' || field === 'salaryMax' ? 'desc' : 'asc');
+        }
+    };
 
     const filtered = useMemo(() => {
         const q = query.toLowerCase().trim();
-        return rows.filter((r) => {
+        let list = rows.filter((r) => {
             if (statusFilter && r.status !== statusFilter) return false;
             if (!q) return true;
             return (
@@ -88,7 +144,22 @@ export function ApplicationList({
                 r.tags.toLowerCase().includes(q)
             );
         });
-    }, [rows, query, statusFilter]);
+        list = [...list].sort((a, b) => {
+            const dir = sortDir === 'asc' ? 1 : -1;
+            if (sortField === 'status') {
+                return dir * STATUS_ORDER.indexOf(a.status) - dir * STATUS_ORDER.indexOf(b.status);
+            }
+            if (sortField === 'matchScore') return dir * (a.matchScore - b.matchScore);
+            if (sortField === 'companyName')
+                return dir * a.companyName.localeCompare(b.companyName);
+            if (sortField === 'location') return dir * a.location.localeCompare(b.location);
+            if (sortField === 'salaryMax') return dir * (a.salaryMax - b.salaryMax);
+            if (sortField === 'updatedAt')
+                return dir * (new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime());
+            return 0;
+        });
+        return list;
+    }, [rows, query, statusFilter, sortField, sortDir]);
 
     useEffect(() => {
         onVisibleCountChange?.(filtered.length);
@@ -108,6 +179,7 @@ export function ApplicationList({
         <Stack gap="md">
             <Group>
                 <TextInput
+                    ref={searchInputRef as React.RefObject<HTMLInputElement>}
                     placeholder={t('applications.searchPlaceholder')}
                     leftSection={<IconSearch size={16} />}
                     value={query}
@@ -124,15 +196,31 @@ export function ApplicationList({
                 />
             </Group>
 
-            {filtered.length === 0 ? (
-                <Center h={260}>
+            {rows.length === 0 ? (
+                <Center h={320}>
+                    <Stack align="center" gap="md">
+                        <IconBuildingStore size={56} style={{ opacity: 0.3 }} />
+                        <Stack align="center" gap={4}>
+                            <Text c="dimmed" fw={500}>
+                                {t('applications.emptyTitle')}
+                            </Text>
+                            <Text size="sm" c="dimmed">
+                                {t('applications.emptySubtitle')}
+                            </Text>
+                        </Stack>
+                        <Button leftSection={<IconPlus size={16} />} onClick={onNew}>
+                            {t('toolbar.newEntry')}
+                        </Button>
+                    </Stack>
+                </Center>
+            ) : filtered.length === 0 ? (
+                <Center h={200}>
                     <Stack align="center" gap={6}>
-                        <IconBuildingStore size={40} style={{ opacity: 0.3 }} />
                         <Text c="dimmed" fw={500}>
                             {t('applications.emptyTitle')}
                         </Text>
                         <Text size="sm" c="dimmed">
-                            {t('applications.emptySubtitle')}
+                            {t('applications.showing', { filtered: 0, total: rows.length })}
                         </Text>
                     </Stack>
                 </Center>
@@ -155,19 +243,50 @@ export function ApplicationList({
                             }}
                         >
                             <Table.Tr>
-                                <Table.Th style={{ width: 180 }}>
+                                <SortableHeader
+                                    field="status"
+                                    active={sortField === 'status'}
+                                    direction={sortDir}
+                                    onToggle={toggleSort}
+                                    style={{ width: 180 }}
+                                >
                                     {t('applications.table.status')}
-                                </Table.Th>
-                                <Table.Th style={{ width: 70 }}>
+                                </SortableHeader>
+                                <SortableHeader
+                                    field="matchScore"
+                                    active={sortField === 'matchScore'}
+                                    direction={sortDir}
+                                    onToggle={toggleSort}
+                                    style={{ width: 70 }}
+                                >
                                     {t('applications.table.match')}
-                                </Table.Th>
-                                <Table.Th>{t('applications.table.companyJob')}</Table.Th>
-                                <Table.Th style={{ width: 160 }}>
+                                </SortableHeader>
+                                <SortableHeader
+                                    field="companyName"
+                                    active={sortField === 'companyName'}
+                                    direction={sortDir}
+                                    onToggle={toggleSort}
+                                >
+                                    {t('applications.table.companyJob')}
+                                </SortableHeader>
+                                <SortableHeader
+                                    field="location"
+                                    active={sortField === 'location'}
+                                    direction={sortDir}
+                                    onToggle={toggleSort}
+                                    style={{ width: 160 }}
+                                >
                                     {t('applications.table.location')}
-                                </Table.Th>
-                                <Table.Th style={{ width: 140 }}>
+                                </SortableHeader>
+                                <SortableHeader
+                                    field="salaryMax"
+                                    active={sortField === 'salaryMax'}
+                                    direction={sortDir}
+                                    onToggle={toggleSort}
+                                    style={{ width: 140 }}
+                                >
                                     {t('applications.table.salary')}
-                                </Table.Th>
+                                </SortableHeader>
                                 <Table.Th>{t('applications.table.stack')}</Table.Th>
                                 <Table.Th style={{ width: 60 }}></Table.Th>
                             </Table.Tr>

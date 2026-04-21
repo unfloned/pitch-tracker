@@ -1,4 +1,5 @@
 import {
+    Accordion,
     Alert,
     Badge,
     Button,
@@ -19,6 +20,7 @@ import {
 import { DateInput } from '@mantine/dates';
 import '@mantine/dates/styles.css';
 import { useForm } from '@mantine/form';
+import { useHotkeys } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import {
     IconAlertCircle,
@@ -40,6 +42,7 @@ interface Props {
     opened: boolean;
     onClose: () => void;
     initial: ApplicationRecord | null;
+    initialUrl?: string | null;
     onSaved: () => void;
     onDelete?: (id: string) => void;
 }
@@ -65,6 +68,7 @@ interface FormValues {
     priority: Priority;
     requiredProfile: string[];
     benefits: string[];
+    interviews: string[];
     matchScore: number;
     matchReason: string;
     source: string;
@@ -92,6 +96,7 @@ const DEFAULTS: FormValues = {
     priority: 'medium',
     requiredProfile: [],
     benefits: [],
+    interviews: [],
     matchScore: 0,
     matchReason: '',
     source: '',
@@ -106,7 +111,14 @@ function scoreColor(score: number): string {
     return 'gray';
 }
 
-export function ApplicationFormModal({ opened, onClose, initial, onSaved, onDelete }: Props) {
+export function ApplicationFormModal({
+    opened,
+    onClose,
+    initial,
+    initialUrl,
+    onSaved,
+    onDelete,
+}: Props) {
     const { t } = useTranslation();
     const form = useForm<FormValues>({ initialValues: DEFAULTS });
     const [extracting, setExtracting] = useState(false);
@@ -120,13 +132,17 @@ export function ApplicationFormModal({ opened, onClose, initial, onSaved, onDele
                 ...initial,
                 requiredProfile: initial.requiredProfile ?? [],
                 benefits: initial.benefits ?? [],
+                interviews: initial.interviews ?? [],
                 appliedAt: initial.appliedAt ? new Date(initial.appliedAt) : null,
             });
         } else {
-            form.setValues(DEFAULTS);
+            form.setValues({
+                ...DEFAULTS,
+                jobUrl: initialUrl || '',
+            });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [opened, initial]);
+    }, [opened, initial, initialUrl]);
 
     const doExtract = async () => {
         const url = form.values.jobUrl.trim();
@@ -201,6 +217,26 @@ export function ApplicationFormModal({ opened, onClose, initial, onSaved, onDele
         onSaved();
     };
 
+    useHotkeys([
+        ['mod+s', () => {
+            if (opened) {
+                form.onSubmit(submit)();
+            }
+        }],
+    ]);
+
+    const defaultOpenedSections = (() => {
+        const open: string[] = ['core'];
+        const v = form.values;
+        if (v.requiredProfile.length || v.benefits.length) open.push('requirements');
+        if (v.salaryMin || v.salaryMax) open.push('salary');
+        if (v.contactName || v.contactEmail || v.contactPhone) open.push('contact');
+        if (v.jobDescription || v.notes || v.tags) open.push('notes');
+        if (v.interviews.length) open.push('interviews');
+        if (v.matchScore > 0) open.push('fit');
+        return open;
+    })();
+
     return (
         <Drawer
             opened={opened}
@@ -245,149 +281,241 @@ export function ApplicationFormModal({ opened, onClose, initial, onSaved, onDele
                         </Tooltip>
                     </Group>
 
-                    <Divider label={t('form.companyAndJob')} labelPosition="left" />
-                    <SimpleGrid cols={2} spacing="sm">
-                        <TextInput label={t('form.company')} {...form.getInputProps('companyName')} />
-                        <TextInput
-                            label={t('form.companyWebsite')}
-                            placeholder="https://..."
-                            {...form.getInputProps('companyWebsite')}
-                        />
-                        <TextInput label={t('form.jobTitle')} {...form.getInputProps('jobTitle')} />
-                        <TextInput
-                            label={t('form.location')}
-                            placeholder={t('form.locationPlaceholder')}
-                            {...form.getInputProps('location')}
-                        />
-                        <Select
-                            label={t('form.remoteType')}
-                            data={(['onsite', 'hybrid', 'remote'] as RemoteType[]).map((v) => ({
-                                value: v,
-                                label: t(`remote.${v}`),
-                            }))}
-                            {...form.getInputProps('remote')}
-                        />
-                        <TextInput label={t('form.source')} {...form.getInputProps('source')} />
-                    </SimpleGrid>
-
-                    <TextInput
-                        label={t('form.stack')}
-                        placeholder={t('form.stackPlaceholder')}
-                        {...form.getInputProps('stack')}
-                    />
-
-                    <Divider label={t('form.requirementsAndBenefits')} labelPosition="left" />
-                    <TagsInput
-                        label={t('form.requiredProfile')}
-                        description={t('form.requiredProfileHint')}
-                        placeholder={t('form.requiredProfilePlaceholder')}
-                        {...form.getInputProps('requiredProfile')}
-                        clearable
-                        splitChars={[',', ';']}
-                    />
-                    <TagsInput
-                        label={t('form.benefits')}
-                        description={t('form.benefitsHint')}
-                        placeholder={t('form.benefitsPlaceholder')}
-                        {...form.getInputProps('benefits')}
-                        clearable
-                        splitChars={[',', ';']}
-                    />
-
-                    <Divider label={t('form.salaryAndStatus')} labelPosition="left" />
-                    <SimpleGrid cols={4} spacing="sm">
-                        <NumberInput
-                            label={t('form.salaryMin')}
-                            min={0}
-                            {...form.getInputProps('salaryMin')}
-                        />
-                        <NumberInput
-                            label={t('form.salaryMax')}
-                            min={0}
-                            {...form.getInputProps('salaryMax')}
-                        />
-                        <TextInput
-                            label={t('form.currency')}
-                            maxLength={3}
-                            {...form.getInputProps('salaryCurrency')}
-                        />
-                        <Select
-                            label={t('form.priority')}
-                            data={(['low', 'medium', 'high'] as Priority[]).map((v) => ({
-                                value: v,
-                                label: t(`priority.${v}`),
-                            }))}
-                            {...form.getInputProps('priority')}
-                        />
-                    </SimpleGrid>
-                    <SimpleGrid cols={2} spacing="sm">
-                        <Select
-                            label={t('form.statusLabel')}
-                            data={STATUS_ORDER.map((s) => ({ value: s, label: t(`status.${s}`) }))}
-                            {...form.getInputProps('status')}
-                        />
-                        <DateInput
-                            label={t('form.appliedAt')}
-                            clearable
-                            valueFormat="DD.MM.YYYY"
-                            {...form.getInputProps('appliedAt')}
-                        />
-                    </SimpleGrid>
-
-                    <Divider label={t('form.contact')} labelPosition="left" />
-                    <SimpleGrid cols={3} spacing="sm">
-                        <TextInput label={t('form.contactName')} {...form.getInputProps('contactName')} />
-                        <TextInput label={t('form.contactEmail')} {...form.getInputProps('contactEmail')} />
-                        <TextInput label={t('form.contactPhone')} {...form.getInputProps('contactPhone')} />
-                    </SimpleGrid>
-
-                    <Divider label={t('form.descriptionAndNotes')} labelPosition="left" />
-                    <Textarea
-                        label={t('form.jobDescription')}
-                        autosize
-                        minRows={2}
-                        maxRows={8}
-                        {...form.getInputProps('jobDescription')}
-                    />
-                    <Textarea
-                        label={t('form.notes')}
-                        autosize
-                        minRows={2}
-                        maxRows={8}
-                        {...form.getInputProps('notes')}
-                    />
-                    <TextInput
-                        label={t('form.tags')}
-                        placeholder={t('form.tagsPlaceholder')}
-                        {...form.getInputProps('tags')}
-                    />
-
-                    <Divider label={t('form.fitCheck')} labelPosition="left" />
-                    {form.values.matchScore > 0 ? (
-                        <Alert
-                            variant="light"
-                            color={scoreColor(form.values.matchScore)}
-                            icon={<IconTargetArrow size={16} />}
-                            title={t('form.fitCheckTitle', { score: form.values.matchScore })}
-                        >
-                            {form.values.matchReason || t('form.fitCheckNoReason')}
-                        </Alert>
-                    ) : (
-                        <Text size="sm" c="dimmed">
-                            {t('form.fitCheckPending')}
-                        </Text>
-                    )}
-                    <Button
-                        variant="light"
-                        onClick={doAssessFit}
-                        loading={assessing}
-                        leftSection={<IconTargetArrow size={16} />}
-                        disabled={!form.values.companyName && !form.values.jobTitle}
+                    <Accordion
+                        multiple
+                        defaultValue={defaultOpenedSections}
+                        variant="separated"
+                        styles={{ item: { borderRadius: 8 } }}
                     >
-                        {t('form.runFitCheck')}
-                    </Button>
+                        <Accordion.Item value="core">
+                            <Accordion.Control>{t('form.companyAndJob')}</Accordion.Control>
+                            <Accordion.Panel>
+                                <Stack gap="sm">
+                                    <SimpleGrid cols={2} spacing="sm">
+                                        <TextInput
+                                            label={t('form.company')}
+                                            {...form.getInputProps('companyName')}
+                                        />
+                                        <TextInput
+                                            label={t('form.companyWebsite')}
+                                            placeholder="https://..."
+                                            {...form.getInputProps('companyWebsite')}
+                                        />
+                                        <TextInput
+                                            label={t('form.jobTitle')}
+                                            {...form.getInputProps('jobTitle')}
+                                        />
+                                        <TextInput
+                                            label={t('form.location')}
+                                            placeholder={t('form.locationPlaceholder')}
+                                            {...form.getInputProps('location')}
+                                        />
+                                        <Select
+                                            label={t('form.remoteType')}
+                                            data={(['onsite', 'hybrid', 'remote'] as RemoteType[]).map(
+                                                (v) => ({ value: v, label: t(`remote.${v}`) }),
+                                            )}
+                                            {...form.getInputProps('remote')}
+                                        />
+                                        <TextInput
+                                            label={t('form.source')}
+                                            {...form.getInputProps('source')}
+                                        />
+                                    </SimpleGrid>
+                                    <TextInput
+                                        label={t('form.stack')}
+                                        placeholder={t('form.stackPlaceholder')}
+                                        {...form.getInputProps('stack')}
+                                    />
+                                </Stack>
+                            </Accordion.Panel>
+                        </Accordion.Item>
 
-                    <Group justify="space-between" mt="xl" pb="md">
+                        <Accordion.Item value="requirements">
+                            <Accordion.Control>
+                                {t('form.requirementsAndBenefits')}
+                            </Accordion.Control>
+                            <Accordion.Panel>
+                                <Stack gap="sm">
+                                    <TagsInput
+                                        label={t('form.requiredProfile')}
+                                        description={t('form.requiredProfileHint')}
+                                        placeholder={t('form.requiredProfilePlaceholder')}
+                                        {...form.getInputProps('requiredProfile')}
+                                        clearable
+                                        splitChars={[',', ';']}
+                                    />
+                                    <TagsInput
+                                        label={t('form.benefits')}
+                                        description={t('form.benefitsHint')}
+                                        placeholder={t('form.benefitsPlaceholder')}
+                                        {...form.getInputProps('benefits')}
+                                        clearable
+                                        splitChars={[',', ';']}
+                                    />
+                                </Stack>
+                            </Accordion.Panel>
+                        </Accordion.Item>
+
+                        <Accordion.Item value="salary">
+                            <Accordion.Control>{t('form.salaryAndStatus')}</Accordion.Control>
+                            <Accordion.Panel>
+                                <Stack gap="sm">
+                                    <SimpleGrid cols={4} spacing="sm">
+                                        <NumberInput
+                                            label={t('form.salaryMin')}
+                                            min={0}
+                                            {...form.getInputProps('salaryMin')}
+                                        />
+                                        <NumberInput
+                                            label={t('form.salaryMax')}
+                                            min={0}
+                                            {...form.getInputProps('salaryMax')}
+                                        />
+                                        <TextInput
+                                            label={t('form.currency')}
+                                            maxLength={3}
+                                            {...form.getInputProps('salaryCurrency')}
+                                        />
+                                        <Select
+                                            label={t('form.priority')}
+                                            data={(['low', 'medium', 'high'] as Priority[]).map(
+                                                (v) => ({ value: v, label: t(`priority.${v}`) }),
+                                            )}
+                                            {...form.getInputProps('priority')}
+                                        />
+                                    </SimpleGrid>
+                                    <SimpleGrid cols={2} spacing="sm">
+                                        <Select
+                                            label={t('form.statusLabel')}
+                                            data={STATUS_ORDER.map((s) => ({
+                                                value: s,
+                                                label: t(`status.${s}`),
+                                            }))}
+                                            {...form.getInputProps('status')}
+                                        />
+                                        <DateInput
+                                            label={t('form.appliedAt')}
+                                            clearable
+                                            valueFormat="DD.MM.YYYY"
+                                            {...form.getInputProps('appliedAt')}
+                                        />
+                                    </SimpleGrid>
+                                </Stack>
+                            </Accordion.Panel>
+                        </Accordion.Item>
+
+                        <Accordion.Item value="contact">
+                            <Accordion.Control>{t('form.contact')}</Accordion.Control>
+                            <Accordion.Panel>
+                                <SimpleGrid cols={3} spacing="sm">
+                                    <TextInput
+                                        label={t('form.contactName')}
+                                        {...form.getInputProps('contactName')}
+                                    />
+                                    <TextInput
+                                        label={t('form.contactEmail')}
+                                        {...form.getInputProps('contactEmail')}
+                                    />
+                                    <TextInput
+                                        label={t('form.contactPhone')}
+                                        {...form.getInputProps('contactPhone')}
+                                    />
+                                </SimpleGrid>
+                            </Accordion.Panel>
+                        </Accordion.Item>
+
+                        <Accordion.Item value="interviews">
+                            <Accordion.Control>
+                                <Group gap="xs">
+                                    <Text>{t('form.interviews')}</Text>
+                                    {form.values.interviews.length > 0 && (
+                                        <Badge size="xs" variant="light">
+                                            {form.values.interviews.length}
+                                        </Badge>
+                                    )}
+                                </Group>
+                            </Accordion.Control>
+                            <Accordion.Panel>
+                                <TagsInput
+                                    label={t('form.interviews')}
+                                    description={t('form.interviewsHint')}
+                                    placeholder={t('form.interviewsPlaceholder')}
+                                    {...form.getInputProps('interviews')}
+                                    clearable
+                                    splitChars={[';']}
+                                />
+                            </Accordion.Panel>
+                        </Accordion.Item>
+
+                        <Accordion.Item value="notes">
+                            <Accordion.Control>
+                                {t('form.descriptionAndNotes')}
+                            </Accordion.Control>
+                            <Accordion.Panel>
+                                <Stack gap="sm">
+                                    <Textarea
+                                        label={t('form.jobDescription')}
+                                        autosize
+                                        minRows={2}
+                                        maxRows={8}
+                                        {...form.getInputProps('jobDescription')}
+                                    />
+                                    <Textarea
+                                        label={t('form.notes')}
+                                        autosize
+                                        minRows={2}
+                                        maxRows={8}
+                                        {...form.getInputProps('notes')}
+                                    />
+                                    <TextInput
+                                        label={t('form.tags')}
+                                        placeholder={t('form.tagsPlaceholder')}
+                                        {...form.getInputProps('tags')}
+                                    />
+                                </Stack>
+                            </Accordion.Panel>
+                        </Accordion.Item>
+
+                        <Accordion.Item value="fit">
+                            <Accordion.Control>{t('form.fitCheck')}</Accordion.Control>
+                            <Accordion.Panel>
+                                <Stack gap="sm">
+                                    {form.values.matchScore > 0 ? (
+                                        <Alert
+                                            variant="light"
+                                            color={scoreColor(form.values.matchScore)}
+                                            icon={<IconTargetArrow size={16} />}
+                                            title={t('form.fitCheckTitle', {
+                                                score: form.values.matchScore,
+                                            })}
+                                        >
+                                            {form.values.matchReason || t('form.fitCheckNoReason')}
+                                        </Alert>
+                                    ) : (
+                                        <Text size="sm" c="dimmed">
+                                            {t('form.fitCheckPending')}
+                                        </Text>
+                                    )}
+                                    <Button
+                                        variant="light"
+                                        onClick={doAssessFit}
+                                        loading={assessing}
+                                        leftSection={<IconTargetArrow size={16} />}
+                                        disabled={
+                                            !form.values.companyName && !form.values.jobTitle
+                                        }
+                                    >
+                                        {t('form.runFitCheck')}
+                                    </Button>
+                                </Stack>
+                            </Accordion.Panel>
+                        </Accordion.Item>
+                    </Accordion>
+
+                    <Divider />
+
+                    <Group justify="space-between" pb="md">
                         <div>
                             {initial && onDelete && (
                                 <Button

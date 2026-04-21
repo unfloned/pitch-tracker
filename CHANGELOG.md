@@ -2,6 +2,29 @@
 
 All notable changes are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 0.3.0
+
+### Added
+- Onboarding wizard on first run (4 steps: welcome, profile, LLM setup, shortcuts overview)
+- Global keyboard shortcut Cmd+Shift+N for quick-add from the clipboard URL
+- Keyboard shortcuts inside the app: Cmd+N new entry, Cmd+F focus search, Cmd+S save form, Cmd+E export, Cmd+, settings, Esc close drawer
+- Tray menu shows latest 5 candidates; click opens the job URL in the browser
+- Follow-up reminder: native notification when an applied status is older than 7 days without change; click opens the application
+- Candidates filter bar: search, source multi-select, status filter, sort by score or date or company, min score
+- Sortable table headers for applications (status, match, company, location, salary)
+- Dynamic badge on the Candidates tab showing count of new candidates; resets on tab click
+- Interview tracking per application (string list, searchable, Accordion section with counter badge)
+- Toggle switches for auto-import threshold and minimum salary in the scoring profile (instead of using 0 as "off")
+- Empty-state call-to-action button on the applications table
+
+### Changed
+- Application form now uses Mantine Accordion for collapsible sections; sections auto-expand when they contain values
+- Auto-import threshold defaults to 85 when the toggle is enabled, 0 (off) when disabled
+- Quick-add listener reads URL from clipboard on trigger and prefills the form
+
+### Fixed
+- Drawer closed on Escape via new hotkey
+
 ## 0.2.1
 
 ### Fixed

@@ -1,7 +1,8 @@
-import { AppShell, Group, Tabs, Title, Box } from '@mantine/core';
+import { AppShell, Badge, Box, Group, Tabs, Title } from '@mantine/core';
+import { useHotkeys } from '@mantine/hooks';
 import { IconBriefcase, IconSparkles } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { STATUS_ORDER } from '@shared/application';
 import type { ApplicationRecord } from '../preload/index';
@@ -11,19 +12,26 @@ import { ApplicationFormModal } from './components/ApplicationForm';
 import { SettingsModal } from './components/SettingsModal';
 import { UpdateBanner } from './components/UpdateBanner';
 import { StatusFooter } from './components/StatusFooter';
+import { OnboardingWizard } from './components/OnboardingWizard';
 import { JobSearchesPage } from './pages/JobSearchesPage';
 
 type TabValue = 'applications' | 'candidates';
+
+const ONBOARDING_KEY = 'simple-tracker-onboarded';
 
 export function App() {
     const { t } = useTranslation();
     const [rows, setRows] = useState<ApplicationRecord[]>([]);
     const [visibleCount, setVisibleCount] = useState(0);
+    const [newCandidatesCount, setNewCandidatesCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [formOpen, setFormOpen] = useState(false);
     const [editing, setEditing] = useState<ApplicationRecord | null>(null);
+    const [quickAddUrl, setQuickAddUrl] = useState<string | null>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [onboardingOpen, setOnboardingOpen] = useState(false);
     const [tab, setTab] = useState<TabValue>('applications');
+    const searchInputRef = useRef<HTMLInputElement | null>(null);
 
     const refresh = useCallback(async () => {
         setLoading(true);
@@ -32,15 +40,57 @@ export function App() {
         setLoading(false);
     }, []);
 
+    const refreshCandidateCount = useCallback(async () => {
+        try {
+            const cands = await window.api.agents.listCandidates(0);
+            const count = cands.filter((c) => c.status === 'new').length;
+            setNewCandidatesCount(count);
+        } catch {
+            setNewCandidatesCount(0);
+        }
+    }, []);
+
     useEffect(() => {
         refresh();
+        refreshCandidateCount();
+
+        if (!localStorage.getItem(ONBOARDING_KEY)) {
+            const hasData = window.api.applications.list().then((list) => {
+                if (list.length === 0) {
+                    setOnboardingOpen(true);
+                }
+            });
+            void hasData;
+        }
+
         const unsubNav = window.api.on('navigate', (target: string) => {
             if (target === 'new') {
                 setTab('applications');
                 setEditing(null);
+                setQuickAddUrl(null);
                 setFormOpen(true);
             }
         });
+        const unsubQuickAdd = window.api.on(
+            'navigate:quickAdd',
+            (payload: { url: string }) => {
+                setTab('applications');
+                setEditing(null);
+                setQuickAddUrl(payload.url || '');
+                setFormOpen(true);
+            },
+        );
+        const unsubOpenApplication = window.api.on(
+            'navigate:openApplication',
+            async (id: string) => {
+                setTab('applications');
+                const found = await window.api.applications.get(id);
+                if (found) {
+                    setEditing(found);
+                    setFormOpen(true);
+                }
+            },
+        );
         const unsubAutoImport = window.api.on(
             'agents:autoImported',
             (payload: { candidate: string; score: number }) => {
@@ -50,11 +100,16 @@ export function App() {
                     message: payload.candidate,
                 });
                 refresh();
+                refreshCandidateCount();
             },
         );
+        const unsubCandidateAdded = window.api.on('agents:candidateAdded', () => {
+            refreshCandidateCount();
+        });
         const unsubFinished = window.api.on(
             'agents:runFinished',
             (payload: { scanned: number; added: number; canceled: boolean; errors: string[] }) => {
+                refreshCandidateCount();
                 if (payload.canceled) {
                     notifications.show({ color: 'gray', message: t('notifications.agentRunCanceled') });
                     return;
@@ -77,28 +132,114 @@ export function App() {
                 });
             },
         );
+        const unsubFollowUp = window.api.on(
+            'reminders:followUp',
+            (payload: { applicationId: string; companyName: string; daysSinceApplied: number }) => {
+                notifications.show({
+                    color: 'yellow',
+                    title: t('notifications.followUpTitle', { days: payload.daysSinceApplied }),
+                    message: payload.companyName,
+                    autoClose: 10000,
+                });
+            },
+        );
         return () => {
             unsubNav();
+            unsubQuickAdd();
+            unsubOpenApplication();
             unsubAutoImport();
+            unsubCandidateAdded();
             unsubFinished();
+            unsubFollowUp();
         };
-    }, [refresh, t]);
+    }, [refresh, refreshCandidateCount, t]);
 
     const openNew = () => {
         setEditing(null);
+        setQuickAddUrl(null);
         setFormOpen(true);
     };
 
     const openEdit = (row: ApplicationRecord) => {
         setEditing(row);
+        setQuickAddUrl(null);
         setFormOpen(true);
     };
+
+    const doExport = async () => {
+        const labels = {
+            sheetName: t('excel.sheetName'),
+            status: Object.fromEntries(STATUS_ORDER.map((s) => [s, t(`status.${s}`)])),
+            remote: {
+                onsite: t('remote.onsite'),
+                hybrid: t('remote.hybrid'),
+                remote: t('remote.remote'),
+            },
+            priority: {
+                low: t('priority.low'),
+                medium: t('priority.medium'),
+                high: t('priority.high'),
+            },
+            headers: {
+                status: t('excel.headers.status'),
+                match: t('excel.headers.match'),
+                company: t('excel.headers.company'),
+                jobTitle: t('excel.headers.jobTitle'),
+                location: t('excel.headers.location'),
+                remote: t('excel.headers.remote'),
+                stack: t('excel.headers.stack'),
+                salaryMin: t('excel.headers.salaryMin'),
+                salaryMax: t('excel.headers.salaryMax'),
+                currency: t('excel.headers.currency'),
+                priority: t('excel.headers.priority'),
+                contactName: t('excel.headers.contactName'),
+                contactEmail: t('excel.headers.contactEmail'),
+                contactPhone: t('excel.headers.contactPhone'),
+                tags: t('excel.headers.tags'),
+                appliedAt: t('excel.headers.appliedAt'),
+                source: t('excel.headers.source'),
+                jobUrl: t('excel.headers.jobUrl'),
+                companyWebsite: t('excel.headers.companyWebsite'),
+                requiredProfile: t('excel.headers.requiredProfile'),
+                benefits: t('excel.headers.benefits'),
+                matchReason: t('excel.headers.matchReason'),
+                notes: t('excel.headers.notes'),
+                createdAt: t('excel.headers.createdAt'),
+                updatedAt: t('excel.headers.updatedAt'),
+            },
+        };
+        const result = await window.api.export.excel(labels, t('excel.dialogTitle'));
+        if (!result.canceled && result.filePath) {
+            notifications.show({
+                color: 'green',
+                message: t('notifications.exported', { count: result.count }),
+            });
+        }
+    };
+
+    useHotkeys([
+        ['mod+n', () => openNew()],
+        ['mod+f', () => searchInputRef.current?.focus()],
+        ['mod+e', () => doExport()],
+        ['mod+,', () => setSettingsOpen(true)],
+        ['escape', () => {
+            if (formOpen) setFormOpen(false);
+            else if (settingsOpen) setSettingsOpen(false);
+        }],
+    ]);
 
     const tabsSection = useMemo(
         () => (
             <Tabs
                 value={tab}
-                onChange={(v) => v && setTab(v as TabValue)}
+                onChange={(v) => {
+                    if (v) {
+                        setTab(v as TabValue);
+                        if (v === 'candidates') {
+                            setNewCandidatesCount(0);
+                        }
+                    }
+                }}
                 variant="pills"
                 radius="md"
                 styles={{ root: { width: '100%' } }}
@@ -107,13 +248,23 @@ export function App() {
                     <Tabs.Tab value="applications" leftSection={<IconBriefcase size={16} />}>
                         {t('tabs.applications')} ({rows.length})
                     </Tabs.Tab>
-                    <Tabs.Tab value="candidates" leftSection={<IconSparkles size={16} />}>
+                    <Tabs.Tab
+                        value="candidates"
+                        leftSection={<IconSparkles size={16} />}
+                        rightSection={
+                            newCandidatesCount > 0 ? (
+                                <Badge size="xs" color="red" variant="filled" circle>
+                                    {newCandidatesCount}
+                                </Badge>
+                            ) : null
+                        }
+                    >
                         {t('tabs.candidates')}
                     </Tabs.Tab>
                 </Tabs.List>
             </Tabs>
         ),
-        [tab, rows.length, t],
+        [tab, rows.length, newCandidatesCount, t],
     );
 
     return (
@@ -126,63 +277,7 @@ export function App() {
                             <Toolbar
                                 onNew={openNew}
                                 onSettings={() => setSettingsOpen(true)}
-                                onExport={async () => {
-                                    const labels = {
-                                        sheetName: t('excel.sheetName'),
-                                        status: Object.fromEntries(
-                                            STATUS_ORDER.map((s) => [s, t(`status.${s}`)]),
-                                        ),
-                                        remote: {
-                                            onsite: t('remote.onsite'),
-                                            hybrid: t('remote.hybrid'),
-                                            remote: t('remote.remote'),
-                                        },
-                                        priority: {
-                                            low: t('priority.low'),
-                                            medium: t('priority.medium'),
-                                            high: t('priority.high'),
-                                        },
-                                        headers: {
-                                            status: t('excel.headers.status'),
-                                            match: t('excel.headers.match'),
-                                            company: t('excel.headers.company'),
-                                            jobTitle: t('excel.headers.jobTitle'),
-                                            location: t('excel.headers.location'),
-                                            remote: t('excel.headers.remote'),
-                                            stack: t('excel.headers.stack'),
-                                            salaryMin: t('excel.headers.salaryMin'),
-                                            salaryMax: t('excel.headers.salaryMax'),
-                                            currency: t('excel.headers.currency'),
-                                            priority: t('excel.headers.priority'),
-                                            contactName: t('excel.headers.contactName'),
-                                            contactEmail: t('excel.headers.contactEmail'),
-                                            contactPhone: t('excel.headers.contactPhone'),
-                                            tags: t('excel.headers.tags'),
-                                            appliedAt: t('excel.headers.appliedAt'),
-                                            source: t('excel.headers.source'),
-                                            jobUrl: t('excel.headers.jobUrl'),
-                                            companyWebsite: t('excel.headers.companyWebsite'),
-                                            requiredProfile: t('excel.headers.requiredProfile'),
-                                            benefits: t('excel.headers.benefits'),
-                                            matchReason: t('excel.headers.matchReason'),
-                                            notes: t('excel.headers.notes'),
-                                            createdAt: t('excel.headers.createdAt'),
-                                            updatedAt: t('excel.headers.updatedAt'),
-                                        },
-                                    };
-                                    const result = await window.api.export.excel(
-                                        labels,
-                                        t('excel.dialogTitle'),
-                                    );
-                                    if (!result.canceled && result.filePath) {
-                                        notifications.show({
-                                            color: 'green',
-                                            message: t('notifications.exported', {
-                                                count: result.count,
-                                            }),
-                                        });
-                                    }
-                                }}
+                                onExport={doExport}
                             />
                         </div>
                     </Group>
@@ -190,7 +285,8 @@ export function App() {
                 <Box
                     px="md"
                     style={{
-                        borderTop: '1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))',
+                        borderTop:
+                            '1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))',
                         WebkitAppRegion: 'no-drag',
                     } as any}
                 >
@@ -216,6 +312,8 @@ export function App() {
                             await refresh();
                         }}
                         onVisibleCountChange={setVisibleCount}
+                        onNew={openNew}
+                        searchInputRef={searchInputRef}
                     />
                 )}
 
@@ -223,6 +321,7 @@ export function App() {
                     <JobSearchesPage
                         onCandidateImported={async () => {
                             await refresh();
+                            await refreshCandidateCount();
                             setTab('applications');
                         }}
                     />
@@ -240,10 +339,15 @@ export function App() {
 
             <ApplicationFormModal
                 opened={formOpen}
-                onClose={() => setFormOpen(false)}
+                onClose={() => {
+                    setFormOpen(false);
+                    setQuickAddUrl(null);
+                }}
                 initial={editing}
+                initialUrl={quickAddUrl}
                 onSaved={async () => {
                     setFormOpen(false);
+                    setQuickAddUrl(null);
                     await refresh();
                 }}
                 onDelete={async (id) => {
@@ -253,6 +357,14 @@ export function App() {
             />
 
             <SettingsModal opened={settingsOpen} onClose={() => setSettingsOpen(false)} />
+
+            <OnboardingWizard
+                opened={onboardingOpen}
+                onClose={() => {
+                    localStorage.setItem(ONBOARDING_KEY, '1');
+                    setOnboardingOpen(false);
+                }}
+            />
         </AppShell>
     );
 }

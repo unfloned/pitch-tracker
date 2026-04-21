@@ -27,6 +27,7 @@ export interface ApplicationRow {
     priority: Priority;
     requiredProfile: string[];
     benefits: string[];
+    interviews: string[];
     matchScore: number;
     matchReason: string;
     source: string;
@@ -57,6 +58,7 @@ interface RawRow {
     priority: Priority;
     requiredProfile: string;
     benefits: string;
+    interviews: string;
     matchScore: number;
     matchReason: string;
     source: string;
@@ -149,6 +151,7 @@ export function initDatabase(): void {
             priority TEXT NOT NULL DEFAULT 'medium',
             requiredProfile TEXT NOT NULL DEFAULT '',
             benefits TEXT NOT NULL DEFAULT '',
+            interviews TEXT NOT NULL DEFAULT '',
             matchScore INTEGER NOT NULL DEFAULT 0,
             matchReason TEXT NOT NULL DEFAULT '',
             source TEXT NOT NULL DEFAULT '',
@@ -163,6 +166,7 @@ export function initDatabase(): void {
     const migrations: Array<[string, string]> = [
         ['requiredProfile', "ALTER TABLE applications ADD COLUMN requiredProfile TEXT NOT NULL DEFAULT ''"],
         ['benefits', "ALTER TABLE applications ADD COLUMN benefits TEXT NOT NULL DEFAULT ''"],
+        ['interviews', "ALTER TABLE applications ADD COLUMN interviews TEXT NOT NULL DEFAULT ''"],
         ['matchScore', "ALTER TABLE applications ADD COLUMN matchScore INTEGER NOT NULL DEFAULT 0"],
         ['matchReason', "ALTER TABLE applications ADD COLUMN matchReason TEXT NOT NULL DEFAULT ''"],
     ];
@@ -181,6 +185,7 @@ function fromRaw(raw: RawRow): ApplicationRow {
         ...raw,
         requiredProfile: parseList(raw.requiredProfile),
         benefits: parseList(raw.benefits),
+        interviews: parseList(raw.interviews),
         appliedAt: raw.appliedAt ? new Date(raw.appliedAt) : null,
         createdAt: new Date(raw.createdAt),
         updatedAt: new Date(raw.updatedAt),
@@ -212,6 +217,7 @@ const FIELDS: (keyof ApplicationInput)[] = [
     'priority',
     'requiredProfile',
     'benefits',
+    'interviews',
     'matchScore',
     'matchReason',
     'source',
@@ -256,6 +262,7 @@ export function createApplication(input: ApplicationInput): ApplicationRow {
         priority: input.priority ?? 'medium',
         requiredProfile: stringifyList(input.requiredProfile),
         benefits: stringifyList(input.benefits),
+        interviews: stringifyList(input.interviews),
         matchScore: input.matchScore ?? 0,
         matchReason: input.matchReason ?? '',
         source: input.source ?? '',
@@ -278,7 +285,7 @@ export function updateApplication(id: string, input: ApplicationInput): Applicat
     const updates: Record<string, unknown> = { updatedAt: now() };
     for (const field of FIELDS) {
         if (input[field] !== undefined) {
-            if (field === 'requiredProfile' || field === 'benefits') {
+            if (field === 'requiredProfile' || field === 'benefits' || field === 'interviews') {
                 updates[field] = stringifyList(input[field] as string[]);
             } else {
                 updates[field] = input[field];
