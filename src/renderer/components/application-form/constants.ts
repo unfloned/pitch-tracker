@@ -1,0 +1,30 @@
+import type { FormValues } from './types';
+
+/** Empty state for a fresh application. */
+export const DEFAULTS: FormValues = {
+    jobUrl: '',
+    companyName: '',
+    companyWebsite: '',
+    jobTitle: '',
+    jobDescription: '',
+    location: '',
+    remote: 'onsite',
+    salaryMin: 0,
+    salaryMax: 0,
+    salaryCurrency: 'EUR',
+    stack: '',
+    status: 'draft',
+    contactName: '',
+    contactEmail: '',
+    contactPhone: '',
+    notes: '',
+    tags: '',
+    priority: 'medium',
+    requiredProfile: [],
+    benefits: [],
+    interviews: [],
+    matchScore: 0,
+    matchReason: '',
+    source: '',
+    appliedAt: null,
+};

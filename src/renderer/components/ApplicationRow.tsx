@@ -8,55 +8,22 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ApplicationRecord } from '../../preload/index';
 import type { ApplicationStatus } from '@shared/application';
+import {
+    formatSalary,
+    formatUpdated,
+    initialsFor,
+    priorityColor,
+    shortSource,
+} from '../lib/format';
 import { StatusSelector } from './StatusSelector';
 import { MatchScore } from './primitives/MatchScore';
 import { useContextMenu } from './primitives/ContextMenu';
-
-function priorityColor(priority: string): string {
-    if (priority === 'high') return 'var(--accent)';
-    if (priority === 'medium') return 'var(--ink-3)';
-    return 'var(--rule-strong)';
-}
-
-function initialsFor(name: string): string {
-    if (!name) return '?';
-    const clean = name.replace(/\s+(GmbH|AG|SE|Ltd|LLC|Inc\.?)$/i, '').trim();
-    const words = clean.split(/\s+/).filter(Boolean);
-    if (words.length === 0) return '?';
-    if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
-    return (words[0][0] + words[1][0]).toUpperCase();
-}
-
-function formatSalary(min: number, max: number, currency: string): string {
-    if (!min && !max) return '—';
-    const c = currency || 'EUR';
-    const sym = c === 'EUR' ? '€' : c + ' ';
-    if (min && max) return `${sym}${(min / 1000).toFixed(0)}–${(max / 1000).toFixed(0)}k`;
-    return `${sym}${((min || max) / 1000).toFixed(0)}k`;
-}
 
 function formatLocation(row: ApplicationRecord, t: (k: string) => string): string {
     const loc = row.location?.trim();
     const rem = row.remote ? t(`remote.${row.remote}`) : '';
     if (loc && rem) return `${rem} · ${loc}`;
     return loc || rem || '—';
-}
-
-function formatUpdated(date?: string | Date | null): string {
-    if (!date) return '—';
-    const d = typeof date === 'string' ? new Date(date) : date;
-    const diff = Date.now() - d.getTime();
-    const h = Math.floor(diff / 3_600_000);
-    if (h < 1) return 'just now';
-    if (h < 24) return `${h}h ago`;
-    const days = Math.floor(h / 24);
-    if (days < 30) return `${days}d ago`;
-    return d.toISOString().slice(0, 10);
-}
-
-function shortSource(src: string): string {
-    if (!src) return 'direct';
-    return src.replace(/^https?:\/\//, '').replace(/\/$/, '').slice(0, 14);
 }
 
 /** Grid columns matching the column header in ApplicationsPage. */

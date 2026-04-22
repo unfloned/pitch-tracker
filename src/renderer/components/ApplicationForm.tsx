@@ -1,50 +1,21 @@
-import {
-    Accordion,
-    Alert,
-    Button,
-    Divider,
-    Drawer,
-    Group,
-    NumberInput,
-    ScrollArea,
-    Select,
-    SimpleGrid,
-    Stack,
-    TagsInput,
-    Text,
-    Textarea,
-    TextInput,
-    Tooltip,
-} from '@mantine/core';
-import { GhostBtn } from './primitives/GhostBtn';
-import { Kbd } from './primitives/Kbd';
-import { Label } from './primitives/Label';
-import { StageGlyph } from './primitives/StageGlyph';
-import { MatchScore } from './primitives/MatchScore';
-import { DateInput } from '@mantine/dates';
-import '@mantine/dates/styles.css';
+import { Accordion, Drawer, ScrollArea, Stack } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useHotkeys } from '@mantine/hooks';
-import { notifications } from '@mantine/notifications';
-import {
-    IconAlertCircle,
-    IconSend,
-    IconSparkles,
-    IconTargetArrow,
-    IconTrash,
-} from '@tabler/icons-react';
 import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import {
-    ApplicationStatus,
-    Priority,
-    RemoteType,
-    STATUS_ORDER,
-} from '@shared/application';
 import type { ApplicationRecord } from '../../preload/index';
 import { EmailSendDialog } from './EmailSendDialog';
-import { RichTextNotes } from './RichTextNotes';
-import { StatusSelector } from './StatusSelector';
+import { DEFAULTS } from './application-form/constants';
+import { FormFooter } from './application-form/FormFooter';
+import { FormHeader } from './application-form/FormHeader';
+import { UrlExtractor } from './application-form/UrlExtractor';
+import { ContactSection } from './application-form/sections/ContactSection';
+import { CoreSection } from './application-form/sections/CoreSection';
+import { FitSection } from './application-form/sections/FitSection';
+import { InterviewsSection } from './application-form/sections/InterviewsSection';
+import { NotesSection } from './application-form/sections/NotesSection';
+import { RequirementsSection } from './application-form/sections/RequirementsSection';
+import { SalaryStatusSection } from './application-form/sections/SalaryStatusSection';
+import type { FormValues } from './application-form/types';
 
 interface Props {
     opened: boolean;
@@ -55,70 +26,11 @@ interface Props {
     onDelete?: (id: string) => void;
 }
 
-interface FormValues {
-    jobUrl: string;
-    companyName: string;
-    companyWebsite: string;
-    jobTitle: string;
-    jobDescription: string;
-    location: string;
-    remote: RemoteType;
-    salaryMin: number;
-    salaryMax: number;
-    salaryCurrency: string;
-    stack: string;
-    status: ApplicationStatus;
-    contactName: string;
-    contactEmail: string;
-    contactPhone: string;
-    notes: string;
-    tags: string;
-    priority: Priority;
-    requiredProfile: string[];
-    benefits: string[];
-    interviews: string[];
-    matchScore: number;
-    matchReason: string;
-    source: string;
-    appliedAt: Date | null;
-}
-
-const DEFAULTS: FormValues = {
-    jobUrl: '',
-    companyName: '',
-    companyWebsite: '',
-    jobTitle: '',
-    jobDescription: '',
-    location: '',
-    remote: 'onsite',
-    salaryMin: 0,
-    salaryMax: 0,
-    salaryCurrency: 'EUR',
-    stack: '',
-    status: 'draft',
-    contactName: '',
-    contactEmail: '',
-    contactPhone: '',
-    notes: '',
-    tags: '',
-    priority: 'medium',
-    requiredProfile: [],
-    benefits: [],
-    interviews: [],
-    matchScore: 0,
-    matchReason: '',
-    source: '',
-    appliedAt: null,
-};
-
-function scoreColor(score: number): string {
-    if (score >= 90) return 'teal';
-    if (score >= 70) return 'green';
-    if (score >= 50) return 'yellow';
-    if (score > 0) return 'orange';
-    return 'gray';
-}
-
+/**
+ * Edit / create drawer for applications. Body is a stack of Accordion
+ * sections, each in its own file so this container stays thin. Auto-opens
+ * sections that already have content so users don't have to hunt.
+ */
 export function ApplicationFormModal({
     opened,
     onClose,
@@ -127,10 +39,7 @@ export function ApplicationFormModal({
     onSaved,
     onDelete,
 }: Props) {
-    const { t } = useTranslation();
     const form = useForm<FormValues>({ initialValues: DEFAULTS });
-    const [extracting, setExtracting] = useState(false);
-    const [assessing, setAssessing] = useState(false);
     const [emailOpened, setEmailOpened] = useState(false);
 
     useEffect(() => {
@@ -145,77 +54,10 @@ export function ApplicationFormModal({
                 appliedAt: initial.appliedAt ? new Date(initial.appliedAt) : null,
             });
         } else {
-            form.setValues({
-                ...DEFAULTS,
-                jobUrl: initialUrl || '',
-            });
+            form.setValues({ ...DEFAULTS, jobUrl: initialUrl || '' });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [opened, initial, initialUrl]);
-
-    const doExtract = async () => {
-        const url = form.values.jobUrl.trim();
-        if (!url) {
-            notifications.show({ color: 'yellow', message: t('notifications.enterUrlFirst') });
-            return;
-        }
-        setExtracting(true);
-        try {
-            const data = await window.api.llm.extract(url);
-            form.setValues((v) => ({
-                ...v,
-                companyName: data.companyName || v.companyName,
-                jobTitle: data.jobTitle || v.jobTitle,
-                location: data.location || v.location,
-                remote: data.remote || v.remote,
-                salaryMin: data.salaryMin || v.salaryMin,
-                salaryMax: data.salaryMax || v.salaryMax,
-                stack: data.stack || v.stack,
-                jobDescription: data.jobDescription || v.jobDescription,
-                requiredProfile: data.requiredProfile.length
-                    ? data.requiredProfile
-                    : v.requiredProfile,
-                benefits: data.benefits.length ? data.benefits : v.benefits,
-                source: data.source || v.source,
-            }));
-            notifications.show({ color: 'green', message: t('notifications.dataExtracted') });
-        } catch (err) {
-            notifications.show({
-                color: 'red',
-                title: t('notifications.extractFailed'),
-                message: (err as Error).message,
-                icon: <IconAlertCircle size={16} />,
-                autoClose: 8000,
-            });
-        } finally {
-            setExtracting(false);
-        }
-    };
-
-    const doAssessFit = async () => {
-        setAssessing(true);
-        try {
-            const result = await window.api.llm.assessFit(form.values);
-            form.setFieldValue('matchScore', result.score);
-            form.setFieldValue('matchReason', result.reason);
-            notifications.show({
-                color: scoreColor(result.score),
-                title: t('form.fitCheckTitle', { score: result.score }),
-                message: result.reason,
-                icon: <IconTargetArrow size={16} />,
-                autoClose: 8000,
-            });
-        } catch (err) {
-            notifications.show({
-                color: 'red',
-                title: t('notifications.fitCheckFailed'),
-                message: (err as Error).message,
-                autoClose: 8000,
-            });
-        } finally {
-            setAssessing(false);
-        }
-    };
 
     const submit = async (values: FormValues) => {
         if (initial) {
@@ -227,13 +69,15 @@ export function ApplicationFormModal({
     };
 
     useHotkeys([
-        ['mod+s', () => {
-            if (opened) {
-                form.onSubmit(submit)();
-            }
-        }],
+        [
+            'mod+s',
+            () => {
+                if (opened) form.onSubmit(submit)();
+            },
+        ],
     ]);
 
+    // Auto-expand sections that already have data so users land with context.
     const defaultOpenedSections = (() => {
         const open: string[] = ['core'];
         const v = form.values;
@@ -267,428 +111,40 @@ export function ApplicationFormModal({
                 },
             }}
         >
-            {/* custom header — design detail-pane style */}
-            <div
-                style={{
-                    padding: '18px 22px 14px',
-                    borderBottom: '1px solid var(--rule)',
-                    background: 'var(--paper)',
-                    flexShrink: 0,
-                }}
-            >
-                <div
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                        marginBottom: 10,
-                    }}
-                >
-                    {initial && (
-                        <>
-                            <span
-                                className="mono"
-                                style={{
-                                    fontSize: 10.5,
-                                    color: 'var(--ink-3)',
-                                    letterSpacing: '0.08em',
-                                }}
-                            >
-                                {initial.id.slice(0, 8).toUpperCase()}
-                            </span>
-                            <div
-                                style={{
-                                    width: 1,
-                                    height: 10,
-                                    background: 'var(--rule-strong)',
-                                }}
-                            />
-                            <span
-                                className="mono"
-                                style={{
-                                    fontSize: 10,
-                                    color: 'var(--ink-4)',
-                                    letterSpacing: '0.1em',
-                                    textTransform: 'uppercase',
-                                }}
-                            >
-                                {initial.source || 'direct'}
-                            </span>
-                        </>
-                    )}
-                    {!initial && <Label>New application</Label>}
-                    <div style={{ flex: 1 }} />
-                    {form.values.matchScore > 0 && (
-                        <MatchScore value={form.values.matchScore} width={48} />
-                    )}
-                    <GhostBtn onClick={onClose}>
-                        <span>Close</span>
-                        <Kbd>esc</Kbd>
-                    </GhostBtn>
-                </div>
+            <FormHeader initial={initial} form={form} onClose={onClose} />
 
-                <div
-                    className="serif"
-                    style={{
-                        fontSize: 26,
-                        fontWeight: 500,
-                        color: 'var(--ink)',
-                        letterSpacing: '-0.015em',
-                        lineHeight: 1.15,
-                    }}
-                >
-                    {form.values.jobTitle || t('form.newTitle')}
-                </div>
-                <div
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        marginTop: 6,
-                    }}
-                >
-                    <StageGlyph status={form.values.status} size={11} />
-                    <span
-                        style={{ fontSize: 14, color: 'var(--ink-2)', fontWeight: 500 }}
-                    >
-                        {form.values.companyName || t('form.company')}
-                    </span>
-                    {form.values.location && (
-                        <>
-                            <span style={{ color: 'var(--ink-4)' }}>·</span>
-                            <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>
-                                {form.values.location}
-                            </span>
-                        </>
-                    )}
-                </div>
-            </div>
-
-            {/* body content (scrollable) */}
             <div style={{ flex: 1, overflow: 'auto', padding: '18px 22px' }}>
-            <form onSubmit={form.onSubmit(submit)}>
-                <Stack gap="md">
-                    <Alert variant="light" color="accent" icon={<IconSparkles size={16} />}>
-                        {t('form.autoFillHint')}
-                    </Alert>
+                <form onSubmit={form.onSubmit(submit)}>
+                    <Stack gap="md">
+                        <UrlExtractor form={form} />
 
-                    <Group align="end">
-                        <TextInput
-                            label={t('form.jobUrl')}
-                            placeholder="https://..."
-                            flex={1}
-                            {...form.getInputProps('jobUrl')}
-                        />
-                        <Tooltip label={t('form.autoFillTooltip')}>
-                            <Button
-                                loading={extracting}
-                                onClick={doExtract}
-                                leftSection={<IconSparkles size={16} />}
-                                variant="light"
-                            >
-                                {t('form.autoFill')}
-                            </Button>
-                        </Tooltip>
-                    </Group>
-
-                    <Accordion
-                        multiple
-                        defaultValue={defaultOpenedSections}
-                        variant="separated"
-                        styles={{ item: { borderRadius: 8 } }}
-                    >
-                        <Accordion.Item value="core">
-                            <Accordion.Control>{t('form.companyAndJob')}</Accordion.Control>
-                            <Accordion.Panel>
-                                <Stack gap="sm">
-                                    <SimpleGrid cols={2} spacing="sm">
-                                        <TextInput
-                                            label={t('form.company')}
-                                            {...form.getInputProps('companyName')}
-                                        />
-                                        <TextInput
-                                            label={t('form.companyWebsite')}
-                                            placeholder="https://..."
-                                            {...form.getInputProps('companyWebsite')}
-                                        />
-                                        <TextInput
-                                            label={t('form.jobTitle')}
-                                            {...form.getInputProps('jobTitle')}
-                                        />
-                                        <TextInput
-                                            label={t('form.location')}
-                                            placeholder={t('form.locationPlaceholder')}
-                                            {...form.getInputProps('location')}
-                                        />
-                                        <Select
-                                            label={t('form.remoteType')}
-                                            data={(['onsite', 'hybrid', 'remote'] as RemoteType[]).map(
-                                                (v) => ({ value: v, label: t(`remote.${v}`) }),
-                                            )}
-                                            {...form.getInputProps('remote')}
-                                        />
-                                        <TextInput
-                                            label={t('form.source')}
-                                            {...form.getInputProps('source')}
-                                        />
-                                    </SimpleGrid>
-                                    <TextInput
-                                        label={t('form.stack')}
-                                        placeholder={t('form.stackPlaceholder')}
-                                        {...form.getInputProps('stack')}
-                                    />
-                                </Stack>
-                            </Accordion.Panel>
-                        </Accordion.Item>
-
-                        <Accordion.Item value="requirements">
-                            <Accordion.Control>
-                                {t('form.requirementsAndBenefits')}
-                            </Accordion.Control>
-                            <Accordion.Panel>
-                                <Stack gap="sm">
-                                    <TagsInput
-                                        label={t('form.requiredProfile')}
-                                        description={t('form.requiredProfileHint')}
-                                        placeholder={t('form.requiredProfilePlaceholder')}
-                                        {...form.getInputProps('requiredProfile')}
-                                        clearable
-                                        splitChars={[',', ';']}
-                                    />
-                                    <TagsInput
-                                        label={t('form.benefits')}
-                                        description={t('form.benefitsHint')}
-                                        placeholder={t('form.benefitsPlaceholder')}
-                                        {...form.getInputProps('benefits')}
-                                        clearable
-                                        splitChars={[',', ';']}
-                                    />
-                                </Stack>
-                            </Accordion.Panel>
-                        </Accordion.Item>
-
-                        <Accordion.Item value="salary">
-                            <Accordion.Control>{t('form.salaryAndStatus')}</Accordion.Control>
-                            <Accordion.Panel>
-                                <Stack gap="sm">
-                                    <SimpleGrid cols={4} spacing="sm">
-                                        <NumberInput
-                                            label={t('form.salaryMin')}
-                                            min={0}
-                                            {...form.getInputProps('salaryMin')}
-                                        />
-                                        <NumberInput
-                                            label={t('form.salaryMax')}
-                                            min={0}
-                                            {...form.getInputProps('salaryMax')}
-                                        />
-                                        <TextInput
-                                            label={t('form.currency')}
-                                            maxLength={3}
-                                            {...form.getInputProps('salaryCurrency')}
-                                        />
-                                        <Select
-                                            label={t('form.priority')}
-                                            data={(['low', 'medium', 'high'] as Priority[]).map(
-                                                (v) => ({ value: v, label: t(`priority.${v}`) }),
-                                            )}
-                                            {...form.getInputProps('priority')}
-                                        />
-                                    </SimpleGrid>
-                                    <SimpleGrid cols={2} spacing="sm">
-                                        <Stack gap={4}>
-                                            <Text size="sm" fw={500}>
-                                                {t('form.statusLabel')}
-                                            </Text>
-                                            <div>
-                                                <StatusSelector
-                                                    value={form.values.status}
-                                                    onChange={(s) => form.setFieldValue('status', s)}
-                                                />
-                                            </div>
-                                        </Stack>
-                                        <DateInput
-                                            label={t('form.appliedAt')}
-                                            clearable
-                                            valueFormat="DD.MM.YYYY"
-                                            {...form.getInputProps('appliedAt')}
-                                        />
-                                    </SimpleGrid>
-                                </Stack>
-                            </Accordion.Panel>
-                        </Accordion.Item>
-
-                        <Accordion.Item value="contact">
-                            <Accordion.Control>{t('form.contact')}</Accordion.Control>
-                            <Accordion.Panel>
-                                <SimpleGrid cols={3} spacing="sm">
-                                    <TextInput
-                                        label={t('form.contactName')}
-                                        {...form.getInputProps('contactName')}
-                                    />
-                                    <TextInput
-                                        label={t('form.contactEmail')}
-                                        {...form.getInputProps('contactEmail')}
-                                    />
-                                    <TextInput
-                                        label={t('form.contactPhone')}
-                                        {...form.getInputProps('contactPhone')}
-                                    />
-                                </SimpleGrid>
-                            </Accordion.Panel>
-                        </Accordion.Item>
-
-                        <Accordion.Item value="interviews">
-                            <Accordion.Control>
-                                <Group gap="xs">
-                                    <Text>{t('form.interviews')}</Text>
-                                    {form.values.interviews.length > 0 && (
-                                        <Badge size="xs" variant="light">
-                                            {form.values.interviews.length}
-                                        </Badge>
-                                    )}
-                                </Group>
-                            </Accordion.Control>
-                            <Accordion.Panel>
-                                <TagsInput
-                                    label={t('form.interviews')}
-                                    description={t('form.interviewsHint')}
-                                    placeholder={t('form.interviewsPlaceholder')}
-                                    {...form.getInputProps('interviews')}
-                                    clearable
-                                    splitChars={[';']}
-                                />
-                            </Accordion.Panel>
-                        </Accordion.Item>
-
-                        <Accordion.Item value="notes">
-                            <Accordion.Control>
-                                {t('form.descriptionAndNotes')}
-                            </Accordion.Control>
-                            <Accordion.Panel>
-                                <Stack gap="sm">
-                                    <Textarea
-                                        label={t('form.jobDescription')}
-                                        autosize
-                                        minRows={2}
-                                        maxRows={8}
-                                        {...form.getInputProps('jobDescription')}
-                                    />
-                                    <Stack gap={4}>
-                                        <Text size="sm" fw={500}>
-                                            {t('form.notes')}
-                                        </Text>
-                                        <RichTextNotes
-                                            value={form.values.notes}
-                                            onChange={(html) => form.setFieldValue('notes', html)}
-                                            minHeight={160}
-                                        />
-                                    </Stack>
-                                    <TextInput
-                                        label={t('form.tags')}
-                                        placeholder={t('form.tagsPlaceholder')}
-                                        {...form.getInputProps('tags')}
-                                    />
-                                </Stack>
-                            </Accordion.Panel>
-                        </Accordion.Item>
-
-                        <Accordion.Item value="fit">
-                            <Accordion.Control>{t('form.fitCheck')}</Accordion.Control>
-                            <Accordion.Panel>
-                                <Stack gap="sm">
-                                    {form.values.matchScore > 0 ? (
-                                        <Alert
-                                            variant="light"
-                                            color={scoreColor(form.values.matchScore)}
-                                            icon={<IconTargetArrow size={16} />}
-                                            title={t('form.fitCheckTitle', {
-                                                score: form.values.matchScore,
-                                            })}
-                                        >
-                                            {form.values.matchReason || t('form.fitCheckNoReason')}
-                                        </Alert>
-                                    ) : (
-                                        <Text size="sm" c="dimmed">
-                                            {t('form.fitCheckPending')}
-                                        </Text>
-                                    )}
-                                    <Button
-                                        variant="light"
-                                        onClick={doAssessFit}
-                                        loading={assessing}
-                                        leftSection={<IconTargetArrow size={16} />}
-                                        disabled={
-                                            !form.values.companyName && !form.values.jobTitle
-                                        }
-                                    >
-                                        {t('form.runFitCheck')}
-                                    </Button>
-                                </Stack>
-                            </Accordion.Panel>
-                        </Accordion.Item>
-                    </Accordion>
-
-                </Stack>
-            </form>
+                        <Accordion
+                            multiple
+                            defaultValue={defaultOpenedSections}
+                            variant="separated"
+                            styles={{ item: { borderRadius: 8 } }}
+                        >
+                            <CoreSection form={form} />
+                            <RequirementsSection form={form} />
+                            <SalaryStatusSection form={form} />
+                            <ContactSection form={form} />
+                            <InterviewsSection form={form} />
+                            <NotesSection form={form} />
+                            <FitSection form={form} />
+                        </Accordion>
+                    </Stack>
+                </form>
             </div>
-            {/* /body */}
 
-            {/* sticky paper footer with action buttons */}
-            <div
-                style={{
-                    display: 'flex',
-                    gap: 6,
-                    padding: 12,
-                    borderTop: '1px solid var(--rule)',
-                    background: 'var(--paper-2)',
-                    flexShrink: 0,
-                    alignItems: 'center',
-                }}
-            >
-                {initial && onDelete && (
-                    <GhostBtn
-                        onClick={() => {
-                            if (
-                                confirm(
-                                    t('confirm.deleteApplication', {
-                                        name: initial.companyName,
-                                    }),
-                                )
-                            ) {
-                                onDelete(initial.id);
-                                onClose();
-                            }
-                        }}
-                        style={{ color: 'var(--rust)' }}
-                    >
-                        <IconTrash size={12} />
-                        <span>{t('common.delete')}</span>
-                    </GhostBtn>
-                )}
-                <div style={{ flex: 1 }} />
-                {initial && (
-                    <GhostBtn onClick={() => setEmailOpened(true)}>
-                        <IconSend size={12} />
-                        <span>{t('email.send')}</span>
-                    </GhostBtn>
-                )}
-                <GhostBtn onClick={onClose}>
-                    <span>{t('common.cancel')}</span>
-                </GhostBtn>
-                <GhostBtn
-                    active
-                    onClick={() => form.onSubmit(submit)()}
-                    style={{
-                        background: 'var(--ink)',
-                        color: 'var(--paper)',
-                        borderColor: 'var(--ink)',
-                    }}
-                >
-                    <span>{initial ? t('common.save') : t('common.create')}</span>
-                    <Kbd tone="dark">⌘⏎</Kbd>
-                </GhostBtn>
-            </div>
+            <FormFooter
+                initial={initial}
+                onDelete={onDelete}
+                onEmail={initial ? () => setEmailOpened(true) : undefined}
+                onCancel={onClose}
+                onSubmit={() => form.onSubmit(submit)()}
+                onClose={onClose}
+            />
+
             {initial && (
                 <EmailSendDialog
                     opened={emailOpened}
