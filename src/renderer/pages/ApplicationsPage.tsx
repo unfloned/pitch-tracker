@@ -1,26 +1,24 @@
 import {
-    ActionIcon,
     Box,
-    Button,
     Center,
-    Group,
     Loader,
-    SegmentedControl,
     Select,
     Stack,
     Text,
     TextInput,
-    Title,
 } from '@mantine/core';
-import { IconBriefcase, IconLayoutKanban, IconList, IconPlus, IconSearch } from '@tabler/icons-react';
-import { RefObject, useEffect, useMemo, useState } from 'react';
+import { IconBriefcase, IconSearch } from '@tabler/icons-react';
+import { RefObject, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ApplicationRecord } from '../../preload/index';
 import type { ApplicationStatus } from '@shared/application';
 import { STATUS_ORDER } from '@shared/application';
-import { ApplicationRow } from '../components/ApplicationRow';
+import { ApplicationRow, ROW_GRID } from '../components/ApplicationRow';
 import { ApplicationBoard } from '../components/ApplicationBoard';
+import { ApplicationDetail } from '../components/ApplicationDetail';
 import { ApplicationFormModal } from '../components/ApplicationForm';
+import { GhostBtn } from '../components/primitives/GhostBtn';
+import { Label } from '../components/primitives/Label';
 
 type ViewMode = 'list' | 'board';
 
@@ -35,13 +33,13 @@ const GROUP_ORDER: GroupKey[] = [
     'closed',
 ];
 
-const GROUP_STATUS_MAP: Record<GroupKey, ApplicationStatus[]> = {
-    draft: ['draft'],
-    active: ['applied', 'in_review'],
-    waiting: ['applied'],
-    interviewing: ['interview_scheduled', 'interviewed'],
-    decision: ['offer_received'],
-    closed: ['accepted', 'rejected', 'withdrawn'],
+type StageBucket = 'active' | 'pipeline' | 'archive' | 'all';
+
+const STAGE_BUCKETS: Record<StageBucket, ApplicationStatus[] | null> = {
+    active:   ['applied', 'in_review', 'interview_scheduled', 'interviewed', 'offer_received'],
+    pipeline: ['draft', 'applied', 'in_review'],
+    archive:  ['accepted', 'rejected', 'withdrawn'],
+    all:      null,
 };
 
 interface Props {
@@ -76,11 +74,30 @@ export function ApplicationsPage({
     const { t } = useTranslation();
     const [query, setQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string | null>(null);
+    const [bucket, setBucket] = useState<StageBucket>('active');
     const [view, setView] = useState<ViewMode>('list');
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+
+    const handleSelect = useCallback((row: ApplicationRecord) => {
+        setSelectedId(row.id);
+    }, []);
+    const closeDetail = useCallback(() => setSelectedId(null), []);
+
+    const bucketCounts = useMemo<Record<StageBucket, number>>(() => {
+        const c: Record<StageBucket, number> = { active: 0, pipeline: 0, archive: 0, all: rows.length };
+        for (const r of rows) {
+            if (STAGE_BUCKETS.active!.includes(r.status)) c.active++;
+            if (STAGE_BUCKETS.pipeline!.includes(r.status)) c.pipeline++;
+            if (STAGE_BUCKETS.archive!.includes(r.status)) c.archive++;
+        }
+        return c;
+    }, [rows]);
 
     const filtered = useMemo(() => {
         const q = query.toLowerCase().trim();
+        const bucketStatuses = STAGE_BUCKETS[bucket];
         return rows.filter((r) => {
+            if (bucketStatuses && !bucketStatuses.includes(r.status)) return false;
             if (statusFilter && r.status !== statusFilter) return false;
             if (!q) return true;
             return (
@@ -91,40 +108,35 @@ export function ApplicationsPage({
                 r.tags.toLowerCase().includes(q)
             );
         });
-    }, [rows, query, statusFilter]);
+    }, [rows, query, statusFilter, bucket]);
 
     useEffect(() => {
         onVisibleCountChange(filtered.length);
     }, [filtered.length, onVisibleCountChange]);
 
+    const selectedRow = useMemo(
+        () => (selectedId ? rows.find((r) => r.id === selectedId) ?? null : null),
+        [rows, selectedId],
+    );
+
+    // Clear selection if the row disappears (delete, filter change from outside).
+    useEffect(() => {
+        if (selectedId && !selectedRow) setSelectedId(null);
+    }, [selectedId, selectedRow]);
+
     const grouped = useMemo(() => {
         const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
         const groups: Record<GroupKey, ApplicationRecord[]> = {
-            decision: [],
-            interviewing: [],
-            waiting: [],
-            active: [],
-            draft: [],
-            closed: [],
+            decision: [], interviewing: [], waiting: [], active: [], draft: [], closed: [],
         };
         for (const r of filtered) {
-            if (r.status === 'offer_received') {
-                groups.decision.push(r);
-            } else if (r.status === 'interview_scheduled' || r.status === 'interviewed') {
-                groups.interviewing.push(r);
-            } else if (
-                r.status === 'applied' &&
-                r.appliedAt &&
-                new Date(r.appliedAt).getTime() < sevenDaysAgo
-            ) {
+            if (r.status === 'offer_received') groups.decision.push(r);
+            else if (r.status === 'interview_scheduled' || r.status === 'interviewed') groups.interviewing.push(r);
+            else if (r.status === 'applied' && r.appliedAt && new Date(r.appliedAt).getTime() < sevenDaysAgo)
                 groups.waiting.push(r);
-            } else if (r.status === 'applied' || r.status === 'in_review') {
-                groups.active.push(r);
-            } else if (r.status === 'draft') {
-                groups.draft.push(r);
-            } else {
-                groups.closed.push(r);
-            }
+            else if (r.status === 'applied' || r.status === 'in_review') groups.active.push(r);
+            else if (r.status === 'draft') groups.draft.push(r);
+            else groups.closed.push(r);
         }
         return groups;
     }, [filtered]);
@@ -139,163 +151,286 @@ export function ApplicationsPage({
 
     const statusOptions = STATUS_ORDER.map((s) => ({ value: s, label: t(`status.${s}`) }));
 
-    const emptyState = (
-        <Center mih={380}>
-            <Stack align="center" gap="md" maw={380}>
-                <IconBriefcase size={48} style={{ opacity: 0.3 }} />
-                <Stack align="center" gap={4}>
-                    <Title order={4}>{t('applications.emptyTitle')}</Title>
-                    <Text c="dimmed" ta="center" size="sm">
-                        {t('applications.emptySubtitle')}
-                    </Text>
-                </Stack>
-                <Button leftSection={<IconPlus size={16} />} onClick={onNew}>
-                    {t('toolbar.newEntry')}
-                </Button>
-            </Stack>
-        </Center>
-    );
-
     if (rows.length === 0) {
-        return emptyState;
+        return (
+            <Center mih={380}>
+                <Stack align="center" gap="md" maw={380}>
+                    <IconBriefcase size={48} style={{ opacity: 0.3, color: 'var(--ink-4)' }} />
+                    <Stack align="center" gap={4}>
+                        <Text size="lg" fw={500} className="serif" style={{ color: 'var(--ink)' }}>
+                            {t('applications.emptyTitle')}
+                        </Text>
+                        <Text ta="center" size="sm" style={{ color: 'var(--ink-3)' }}>
+                            {t('applications.emptySubtitle')}
+                        </Text>
+                    </Stack>
+                    <GhostBtn active onClick={onNew}>
+                        <span>＋ {t('toolbar.newEntry')}</span>
+                    </GhostBtn>
+                </Stack>
+            </Center>
+        );
     }
 
     return (
-        <Stack gap="md">
-            <Group justify="space-between" align="end" wrap="wrap">
-                <Stack gap={2}>
-                    <Title order={2}>{t('tabs.applications')}</Title>
-                    <Text c="dimmed" size="sm">
-                        {filtered.length} of {rows.length}
-                    </Text>
-                </Stack>
-                <Group gap="xs">
-                    <SegmentedControl
-                        value={view}
-                        onChange={(v) => setView(v as ViewMode)}
-                        size="xs"
-                        data={[
-                            {
-                                value: 'list',
-                                label: (
-                                    <span
-                                        style={{
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: 4,
-                                            whiteSpace: 'nowrap',
-                                        }}
-                                    >
-                                        <IconList size={14} />
-                                        {t('applications.viewList')}
-                                    </span>
-                                ),
-                            },
-                            {
-                                value: 'board',
-                                label: (
-                                    <span
-                                        style={{
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: 4,
-                                            whiteSpace: 'nowrap',
-                                        }}
-                                    >
-                                        <IconLayoutKanban size={14} />
-                                        {t('applications.viewBoard')}
-                                    </span>
-                                ),
-                            },
-                        ]}
-                    />
-                    <Button leftSection={<IconPlus size={14} />} size="xs" onClick={onNew}>
-                        {t('toolbar.newEntry')}
-                    </Button>
-                </Group>
-            </Group>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+            {/* secondary toolbar */}
+            <div
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '10px 16px',
+                    borderBottom: '1px solid var(--rule)',
+                    flexShrink: 0,
+                }}
+            >
+                {/* stage bucket filter */}
+                <div
+                    style={{
+                        display: 'inline-flex',
+                        border: '1px solid var(--rule-strong)',
+                        borderRadius: 4,
+                        overflow: 'hidden',
+                    }}
+                >
+                    {(['active', 'pipeline', 'archive', 'all'] as StageBucket[]).map((k, i) => (
+                        <button
+                            key={k}
+                            type="button"
+                            onClick={() => setBucket(k)}
+                            style={{
+                                padding: '4px 10px',
+                                fontSize: 11.5,
+                                fontWeight: bucket === k ? 600 : 500,
+                                fontFamily: 'var(--f-ui)',
+                                color: bucket === k ? 'var(--ink)' : 'var(--ink-3)',
+                                background: bucket === k ? 'var(--paper-2)' : 'var(--card)',
+                                border: 'none',
+                                borderRight: i < 3 ? '1px solid var(--rule-strong)' : 'none',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6,
+                            }}
+                        >
+                            <span style={{ textTransform: 'capitalize' }}>{t(`applications.bucket.${k}`, k)}</span>
+                            <span
+                                className="mono tnum"
+                                style={{ fontSize: 10, color: 'var(--ink-4)' }}
+                            >
+                                {bucketCounts[k]}
+                            </span>
+                        </button>
+                    ))}
+                </div>
 
-            <Group gap="xs">
+                <div style={{ width: 1, height: 20, background: 'var(--rule-strong)' }} />
+
                 <TextInput
                     ref={searchInputRef as React.RefObject<HTMLInputElement>}
                     placeholder={t('applications.searchPlaceholder')}
                     leftSection={<IconSearch size={14} />}
                     value={query}
                     onChange={(e) => setQuery(e.currentTarget.value)}
-                    flex={1}
-                    size="sm"
+                    size="xs"
+                    style={{ flex: 1, maxWidth: 280 }}
                 />
+
                 <Select
                     placeholder={t('applications.allStatuses')}
                     clearable
-                    size="sm"
+                    size="xs"
                     data={statusOptions}
                     value={statusFilter}
                     onChange={setStatusFilter}
-                    w={200}
+                    w={160}
                 />
-            </Group>
 
-            {filtered.length === 0 ? (
-                <Center mih={240}>
-                    <Stack align="center" gap={4}>
-                        <Text c="dimmed" fw={500}>
-                            {t('applications.noMatch')}
-                        </Text>
-                        <Text size="sm" c="dimmed">
-                            {t('applications.noMatchSub')}
-                        </Text>
-                    </Stack>
-                </Center>
-            ) : view === 'board' ? (
-                <ApplicationBoard rows={filtered} onEdit={onEdit} onStatusChange={onStatusChange} />
-            ) : (
-                <Stack gap="lg">
-                    {GROUP_ORDER.map((key) => {
-                        const items = grouped[key];
-                        if (items.length === 0) return null;
-                        return (
-                            <Box key={key}>
-                                <Group gap={6} mb="xs">
-                                    <Text
-                                        size="xs"
-                                        fw={600}
-                                        c="dimmed"
-                                        tt="uppercase"
-                                        style={{ letterSpacing: '0.05em' }}
-                                    >
-                                        {t(`applications.group${capitalize(key)}`)}
-                                    </Text>
-                                    <Text size="xs" c="dimmed">
-                                        · {items.length}
-                                    </Text>
-                                </Group>
-                                <Stack
-                                    gap={0}
-                                    p={4}
+                <div style={{ flex: 1 }} />
+
+                <Label>View</Label>
+                <div
+                    style={{
+                        display: 'inline-flex',
+                        border: '1px solid var(--rule-strong)',
+                        borderRadius: 4,
+                        overflow: 'hidden',
+                    }}
+                >
+                    {(['list', 'board'] as ViewMode[]).map((v, i) => (
+                        <button
+                            key={v}
+                            type="button"
+                            onClick={() => setView(v)}
+                            style={{
+                                padding: '4px 10px',
+                                fontSize: 11,
+                                fontWeight: view === v ? 600 : 500,
+                                fontFamily: 'var(--f-ui)',
+                                color: view === v ? 'var(--ink)' : 'var(--ink-3)',
+                                background: view === v ? 'var(--paper-2)' : 'var(--card)',
+                                border: 'none',
+                                borderRight: i < 1 ? '1px solid var(--rule-strong)' : 'none',
+                                cursor: 'pointer',
+                                textTransform: 'capitalize',
+                            }}
+                        >
+                            {v}
+                        </button>
+                    ))}
+                </div>
+
+                <GhostBtn active onClick={onNew}>
+                    <span>＋ New</span>
+                    <span
+                        className="mono"
+                        style={{
+                            fontSize: 10,
+                            padding: '0 4px',
+                            borderRadius: 2,
+                            background: 'rgba(0,0,0,0.08)',
+                            color: 'var(--ink-2)',
+                        }}
+                    >
+                        ⌘N
+                    </span>
+                </GhostBtn>
+            </div>
+
+            {/* body — split: list (+ groups) on the left, detail pane on the right */}
+            <div style={{ flex: 1, display: 'flex', minHeight: 0, minWidth: 0 }}>
+                <div
+                    style={{
+                        flex: 1,
+                        minWidth: 0,
+                        overflow: 'auto',
+                        background: view === 'board' ? 'var(--paper)' : 'var(--card)',
+                    }}
+                >
+                    {filtered.length === 0 ? (
+                        <Center mih={240}>
+                            <Stack align="center" gap={4}>
+                                <Text fw={500} style={{ color: 'var(--ink-2)' }}>
+                                    {t('applications.noMatch')}
+                                </Text>
+                                <Text size="sm" style={{ color: 'var(--ink-3)' }}>
+                                    {t('applications.noMatchSub')}
+                                </Text>
+                            </Stack>
+                        </Center>
+                    ) : view === 'board' ? (
+                        <Box p="md">
+                            <ApplicationBoard
+                                rows={filtered}
+                                onEdit={onEdit}
+                                onStatusChange={onStatusChange}
+                            />
+                        </Box>
+                    ) : (
+                        <>
+                            {/* column header */}
+                            <div
+                                style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: ROW_GRID,
+                                    height: 26,
+                                    alignItems: 'center',
+                                    background: 'var(--paper-2)',
+                                    borderBottom: '1px solid var(--rule-strong)',
+                                    position: 'sticky',
+                                    top: 0,
+                                    zIndex: 3,
+                                }}
+                            >
+                                <div />
+                                {['ID', 'STAGE', 'ROLE', 'SALARY', 'LOCATION', 'MATCH', 'SRC', 'UPDATED'].map(
+                                    (h, i) => (
+                                        <div
+                                            key={h}
+                                            className="mono"
+                                            style={{
+                                                fontSize: 9.5,
+                                                fontWeight: 600,
+                                                color: 'var(--ink-3)',
+                                                letterSpacing: '0.1em',
+                                                paddingLeft: i === 0 ? 10 : 0,
+                                            }}
+                                        >
+                                            {h}
+                                        </div>
+                                    ),
+                                )}
+                                <div
+                                    className="mono"
                                     style={{
-                                        borderRadius: 10,
-                                        border:
-                                            '1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5))',
-                                        backgroundColor:
-                                            'light-dark(white, var(--mantine-color-dark-7))',
+                                        fontSize: 9.5,
+                                        fontWeight: 600,
+                                        color: 'var(--ink-3)',
+                                        letterSpacing: '0.1em',
+                                        textAlign: 'center',
+                                        position: 'sticky',
+                                        right: 0,
+                                        background: 'var(--paper-2)',
+                                        borderLeft: '1px solid var(--rule)',
+                                        height: '100%',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        zIndex: 2,
                                     }}
                                 >
-                                    {items.map((r) => (
-                                        <ApplicationRow
-                                            key={r.id}
-                                            row={r}
-                                            onEdit={onEdit}
-                                            onDelete={onDelete}
-                                            onStatusChange={onStatusChange}
-                                        />
-                                    ))}
-                                </Stack>
-                            </Box>
-                        );
-                    })}
-                </Stack>
-            )}
+                                    ACT
+                                </div>
+                            </div>
+
+                            {/* grouped rows */}
+                            {GROUP_ORDER.map((key) => {
+                                const items = grouped[key];
+                                if (items.length === 0) return null;
+                                return (
+                                    <div key={key}>
+                                        <div
+                                            style={{
+                                                padding: '8px 16px 6px',
+                                                background: 'var(--paper)',
+                                                borderBottom: '1px solid var(--rule)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: 10,
+                                            }}
+                                        >
+                                            <Label>
+                                                {t(`applications.group${capitalize(key)}`)} · {items.length}
+                                            </Label>
+                                            <div style={{ flex: 1, height: 1, background: 'var(--rule)' }} />
+                                        </div>
+                                        {items.map((r) => (
+                                            <ApplicationRow
+                                                key={r.id}
+                                                row={r}
+                                                selected={selectedId === r.id}
+                                                onEdit={handleSelect}
+                                                onDelete={onDelete}
+                                                onStatusChange={onStatusChange}
+                                            />
+                                        ))}
+                                    </div>
+                                );
+                            })}
+                        </>
+                    )}
+                </div>
+
+                {view === 'list' && selectedRow && (
+                    <ApplicationDetail
+                        app={selectedRow}
+                        onEdit={onEdit}
+                        onDelete={onDelete}
+                        onClose={closeDetail}
+                    />
+                )}
+            </div>
 
             <ApplicationFormModal
                 opened={detailOpen}
@@ -304,7 +439,7 @@ export function ApplicationsPage({
                 onSaved={onSavedDetail}
                 onDelete={onDelete}
             />
-        </Stack>
+        </div>
     );
 }
 

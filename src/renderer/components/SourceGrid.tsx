@@ -51,12 +51,9 @@ export function SourceGrid({ value, onChange, columns = 2 }: Props) {
                         style={{
                             cursor: 'pointer',
                             padding: 12,
-                            borderRadius: 8,
-                            border: `2px solid ${active ? 'var(--mantine-color-accent-5)' : 'light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))'}`,
-                            backgroundColor: active
-                                ? 'light-dark(var(--mantine-color-accent-0), rgba(87, 130, 255, 0.08))'
-                                : 'transparent',
-                            transition: 'all 120ms ease',
+                            border: `1px solid ${active ? 'var(--ink)' : 'var(--rule-strong)'}`,
+                            background: active ? 'var(--paper-2)' : 'var(--card)',
+                            transition: 'border-color 120ms, background 120ms',
                             position: 'relative',
                         }}
                     >

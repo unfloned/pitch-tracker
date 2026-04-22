@@ -1,23 +1,17 @@
-import { Badge, Box, Kbd, Stack, Text, UnstyledButton } from '@mantine/core';
-import {
-    IconBriefcase,
-    IconChartBar,
-    IconInbox,
-    IconMessageCircle,
-    IconRobot,
-    IconSettings,
-    IconSparkles,
-} from '@tabler/icons-react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ROUTES, type RoutePath } from '../routes';
+import { Kbd } from './primitives/Kbd';
+import { Label } from './primitives/Label';
 
 interface NavItem {
     path: RoutePath;
-    icon: React.ComponentType<{ size?: number | string }>;
+    /** 3-5 char mono icon text in place of vector icons. */
+    tag: string;
     labelKey: string;
-    badge?: number;
-    badgeColor?: string;
+    count?: number;
+    shortcut?: string;
 }
 
 interface Props {
@@ -25,66 +19,92 @@ interface Props {
     candidatesCount: number;
 }
 
-function NavButton({
-    icon: Icon,
+function SidebarItem({
+    tag,
     label,
+    count,
     active,
-    badge,
-    badgeColor,
+    shortcut,
     onClick,
 }: {
-    icon: React.ComponentType<{ size?: number | string }>;
+    tag: string;
     label: string;
+    count?: number;
     active: boolean;
-    badge?: number;
-    badgeColor?: string;
+    shortcut?: string;
     onClick: () => void;
 }) {
     return (
-        <UnstyledButton
+        <div
             onClick={onClick}
             style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 10,
-                padding: '6px 10px',
-                borderRadius: 6,
-                backgroundColor: active
-                    ? 'light-dark(var(--mantine-color-accent-0), rgba(87, 130, 255, 0.15))'
-                    : 'transparent',
-                color: active
-                    ? 'light-dark(var(--mantine-color-accent-7), var(--mantine-color-accent-2))'
-                    : 'light-dark(var(--mantine-color-gray-7), var(--mantine-color-gray-3))',
-                fontWeight: active ? 600 : 500,
-                fontSize: 13,
-                transition: 'background 120ms, color 120ms',
-                width: '100%',
+                height: 26,
+                padding: '0 10px',
+                marginInline: 6,
+                borderRadius: 3,
+                background: active ? 'var(--paper-3)' : 'transparent',
+                color: active ? 'var(--ink)' : 'var(--ink-2)',
+                cursor: 'pointer',
+                borderLeft: active ? '2px solid var(--accent)' : '2px solid transparent',
+                paddingLeft: active ? 8 : 10,
+                transition: 'background 80ms',
             }}
             onMouseEnter={(e) => {
-                if (!active) {
-                    e.currentTarget.style.backgroundColor =
-                        'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6))';
-                }
+                if (!active) e.currentTarget.style.background = 'rgba(0,0,0,0.03)';
             }}
             onMouseLeave={(e) => {
-                if (!active) e.currentTarget.style.backgroundColor = 'transparent';
+                if (!active) e.currentTarget.style.background = 'transparent';
             }}
         >
-            <Icon size={16} />
-            <Text size="sm" style={{ flex: 1 }} inherit>
+            <span
+                className="mono"
+                style={{
+                    width: 38,
+                    fontSize: 9.5,
+                    letterSpacing: '0.06em',
+                    fontWeight: 600,
+                    color: active ? 'var(--ink-2)' : 'var(--ink-4)',
+                }}
+            >
+                {tag}
+            </span>
+            <span
+                style={{
+                    fontSize: 12.5,
+                    fontWeight: active ? 600 : 500,
+                    flex: 1,
+                }}
+            >
                 {label}
-            </Text>
-            {badge !== undefined && badge > 0 && (
-                <Badge
-                    size="xs"
-                    variant={active ? 'filled' : 'light'}
-                    color={badgeColor || 'gray'}
-                    styles={{ root: { fontWeight: 600 } }}
+            </span>
+            {count !== undefined && count > 0 && (
+                <span
+                    className="mono tnum"
+                    style={{
+                        fontSize: 10,
+                        color: active ? 'var(--ink-2)' : 'var(--ink-3)',
+                        fontWeight: 500,
+                    }}
                 >
-                    {badge}
-                </Badge>
+                    {count}
+                </span>
             )}
-        </UnstyledButton>
+            {shortcut && <Kbd>{shortcut}</Kbd>}
+        </div>
+    );
+}
+
+function SidebarGroup({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+        <div style={{ marginTop: 14 }}>
+            <div style={{ padding: '0 14px 4px' }}>
+                <Label>{label}</Label>
+            </div>
+            {children}
+        </div>
     );
 }
 
@@ -93,128 +113,159 @@ export function Sidebar({ applicationsCount, candidatesCount }: Props) {
     const navigate = useNavigate();
     const location = useLocation();
     const currentPath = location.pathname;
+    const [ollamaRunning, setOllamaRunning] = useState<boolean | null>(null);
 
-    const mainItems: NavItem[] = [
-        {
-            path: ROUTES.dashboard,
-            icon: IconInbox,
-            labelKey: 'nav.inbox',
-        },
-        {
-            path: ROUTES.applications,
-            icon: IconBriefcase,
-            labelKey: 'tabs.applications',
-            badge: applicationsCount,
-            badgeColor: 'gray',
-        },
-        {
-            path: ROUTES.candidates,
-            icon: IconSparkles,
-            labelKey: 'tabs.candidates',
-            badge: candidatesCount > 0 ? candidatesCount : undefined,
-            badgeColor: 'red',
-        },
-        {
-            path: ROUTES.agents,
-            icon: IconRobot,
-            labelKey: 'nav.agents',
-        },
-        {
-            path: ROUTES.chat,
-            icon: IconMessageCircle,
-            labelKey: 'nav.chat',
-        },
-        {
-            path: ROUTES.analytics,
-            icon: IconChartBar,
-            labelKey: 'nav.analytics',
-        },
+    useEffect(() => {
+        const check = async () => {
+            try {
+                const status = await window.api.llm.status();
+                setOllamaRunning(status.running);
+            } catch {
+                setOllamaRunning(false);
+            }
+        };
+        check();
+        const interval = setInterval(check, 30000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const items: NavItem[] = [
+        { path: ROUTES.dashboard,    tag: 'INBOX',  labelKey: 'nav.inbox',           shortcut: '⌘1' },
+        { path: ROUTES.applications, tag: 'APPS',   labelKey: 'tabs.applications',   count: applicationsCount,          shortcut: '⌘2' },
+        { path: ROUTES.candidates,   tag: 'CAND',   labelKey: 'tabs.candidates',     count: candidatesCount,            shortcut: '⌘3' },
+        { path: ROUTES.agents,       tag: 'AGENT',  labelKey: 'nav.agents',          shortcut: '⌘4' },
+        { path: ROUTES.chat,         tag: 'ASSIST', labelKey: 'nav.chat',            shortcut: '⌘5' },
+        { path: ROUTES.analytics,    tag: 'ANLY',   labelKey: 'nav.analytics',       shortcut: '⌘6' },
     ];
 
     const isActive = (path: string) =>
         currentPath === path || (path === ROUTES.dashboard && currentPath === '/');
 
     return (
-        <Stack
-            h="100%"
-            justify="space-between"
-            py="sm"
-            px="xs"
-            gap={4}
+        <div
             style={{
-                backgroundColor:
-                    'light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))',
-                borderRight:
-                    '1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5))',
+                height: '100%',
+                background: 'var(--paper)',
+                borderRight: '1px solid var(--rule-strong)',
+                display: 'flex',
+                flexDirection: 'column',
+                flexShrink: 0,
             }}
         >
-            <Stack gap={4}>
-                <Box
-                    px="sm"
-                    py="xs"
-                    mb={4}
-                    style={{ WebkitAppRegion: 'drag', minHeight: 30 }}
-                >
-                    <Text
-                        fw={700}
-                        size="sm"
-                        style={{ letterSpacing: '-0.02em', marginLeft: 54 }}
+            <div
+                style={{
+                    padding: '14px 16px 10px',
+                }}
+            >
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <span
+                        className="serif"
+                        style={{
+                            fontSize: 20,
+                            fontWeight: 600,
+                            color: 'var(--ink)',
+                            letterSpacing: '-0.01em',
+                        }}
                     >
                         {t('app.titleShort')}
-                    </Text>
-                </Box>
+                        <span style={{ color: 'var(--accent-ink)' }}>.</span>
+                    </span>
+                </div>
+                <div
+                    className="mono"
+                    style={{
+                        fontSize: 10,
+                        color: 'var(--ink-3)',
+                        marginTop: 2,
+                        letterSpacing: '0.04em',
+                    }}
+                >
+                    local · offline · yours
+                </div>
+            </div>
 
-                <Stack gap={2} px={4}>
-                    <Text
-                        size="xs"
-                        c="dimmed"
-                        tt="uppercase"
-                        fw={600}
-                        px="sm"
-                        py={4}
-                        style={{ letterSpacing: '0.06em', fontSize: 10 }}
-                    >
-                        {t('nav.section.main')}
-                    </Text>
-                    {mainItems.map((item) => (
-                        <NavButton
-                            key={item.path}
-                            icon={item.icon}
-                            label={t(item.labelKey)}
-                            active={isActive(item.path)}
-                            badge={item.badge}
-                            badgeColor={item.badgeColor}
-                            onClick={() => navigate(item.path)}
-                        />
-                    ))}
-                </Stack>
-            </Stack>
+            <SidebarGroup label={t('nav.section.main')}>
+                {items.map((item) => (
+                    <SidebarItem
+                        key={item.path}
+                        tag={item.tag}
+                        label={t(item.labelKey)}
+                        count={item.count}
+                        shortcut={item.shortcut}
+                        active={isActive(item.path)}
+                        onClick={() => navigate(item.path)}
+                    />
+                ))}
+            </SidebarGroup>
 
-            <Stack gap={4} px={4}>
-                <NavButton
-                    icon={IconSettings}
-                    label={t('toolbar.settings')}
-                    active={isActive(ROUTES.settings)}
-                    onClick={() => navigate(ROUTES.settings)}
-                />
-                <Box
-                    px="sm"
-                    py={6}
+            <div style={{ flex: 1 }} />
+
+            <SidebarItem
+                tag="SET"
+                label={t('toolbar.settings')}
+                active={isActive(ROUTES.settings)}
+                shortcut="⌘,"
+                onClick={() => navigate(ROUTES.settings)}
+            />
+
+            <div
+                style={{
+                    margin: 10,
+                    padding: '8px 10px',
+                    background: 'var(--card)',
+                    border: '1px solid var(--rule)',
+                    borderRadius: 4,
+                }}
+            >
+                <div
                     style={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: 6,
-                        fontSize: 11,
-                        color: 'var(--mantine-color-dimmed)',
+                        marginBottom: 4,
                     }}
                 >
-                    <Kbd size="xs">⌘</Kbd>
-                    <Kbd size="xs">K</Kbd>
-                    <Text size="xs" c="dimmed" inherit>
-                        commands
-                    </Text>
-                </Box>
-            </Stack>
-        </Stack>
+                    <div
+                        style={{
+                            width: 7,
+                            height: 7,
+                            borderRadius: '50%',
+                            background:
+                                ollamaRunning === null
+                                    ? 'var(--ink-4)'
+                                    : ollamaRunning
+                                      ? 'var(--moss)'
+                                      : 'var(--rust)',
+                        }}
+                    />
+                    <span
+                        className="mono"
+                        style={{
+                            fontSize: 10,
+                            color: 'var(--ink-2)',
+                            letterSpacing: '0.05em',
+                            fontWeight: 600,
+                        }}
+                    >
+                        OLLAMA ·{' '}
+                        {ollamaRunning === null
+                            ? '...'
+                            : ollamaRunning
+                              ? 'READY'
+                              : 'OFFLINE'}
+                    </span>
+                </div>
+                <div
+                    className="mono"
+                    style={{
+                        fontSize: 10,
+                        color: 'var(--ink-3)',
+                        letterSpacing: '0.02em',
+                    }}
+                >
+                    {ollamaRunning ? 'local LLM idle' : 'run ollama serve'}
+                </div>
+            </div>
+        </div>
     );
 }

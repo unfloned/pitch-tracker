@@ -22,7 +22,7 @@ function createWindow(): void {
         minWidth: 900,
         minHeight: 600,
         title: 'Pitch Tracker',
-        backgroundColor: '#0f0f12',
+        backgroundColor: '#f4efe6',
         titleBarStyle: 'hiddenInset',
         show: false,
         webPreferences: {

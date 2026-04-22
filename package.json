@@ -30,6 +30,9 @@
     "dependencies": {
         "@deepkit/core": "^1.0.19",
         "@deepkit/type": "^1.0.19",
+        "@fontsource/fraunces": "^5.2.9",
+        "@fontsource/jetbrains-mono": "^5.2.8",
+        "@fontsource/space-grotesk": "^5.2.10",
         "@mantine/charts": "^9.1.0",
         "@mantine/core": "^9.1.0",
         "@mantine/dates": "^9.1.0",

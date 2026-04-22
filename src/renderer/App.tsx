@@ -1,7 +1,8 @@
-import { ActionIcon, AppShell, Group, Tooltip } from '@mantine/core';
+import { AppShell, Tooltip } from '@mantine/core';
 import { useHotkeys } from '@mantine/hooks';
-import { IconBolt, IconDownload, IconPlus, IconSearch } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
+import { GhostBtn } from './components/primitives/GhostBtn';
+import { Kbd } from './components/primitives/Kbd';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
@@ -239,6 +240,13 @@ export function App() {
         ['mod+f', () => searchInputRef.current?.focus()],
         ['mod+e', () => doExport()],
         ['mod+,', () => navigate(ROUTES.settings)],
+        // Workspace navigation — matches the sidebar shortcuts.
+        ['mod+1', () => navigate(ROUTES.dashboard)],
+        ['mod+2', () => navigate(ROUTES.applications)],
+        ['mod+3', () => navigate(ROUTES.candidates)],
+        ['mod+4', () => navigate(ROUTES.agents)],
+        ['mod+5', () => navigate(ROUTES.chat)],
+        ['mod+6', () => navigate(ROUTES.analytics)],
         ['escape', () => {
             if (formOpen) setFormOpen(false);
         }],
@@ -262,52 +270,96 @@ export function App() {
 
     const onApplicationsRoute = location.pathname === ROUTES.applications;
 
+    // Full-bleed routes manage their own chrome (header/body/padding).
+    // Other routes get breathing room from Main padding so they don't sit flush left.
+    const fullBleedRoutes: string[] = [
+        ROUTES.applications,
+        ROUTES.analytics,
+        ROUTES.chat,
+    ];
+    const isFullBleed = fullBleedRoutes.includes(location.pathname);
+
     return (
         <AppShell
             navbar={{ width: 220, breakpoint: 'xs' }}
-            header={{ height: 48 }}
-            footer={{ height: 40 }}
-            padding="lg"
+            header={{ height: 36 }}
+            footer={{ height: 28 }}
+            padding={0}
         >
             <AppShell.Header
-                style={{ WebkitAppRegion: 'drag', borderBottom: 'none' }}
+                style={{
+                    WebkitAppRegion: 'drag',
+                    borderBottom: '1px solid var(--rule-strong)',
+                    background: 'var(--paper-2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '0 12px',
+                    position: 'relative',
+                }}
             >
-                <Group h="100%" px="md" pl={80} justify="space-between">
-                    <div />
-                    <div style={{ WebkitAppRegion: 'no-drag' }}>
-                        <Group gap="xs">
-                            <Tooltip label={t('cmd.placeholder') + ' (Cmd+K)'}>
-                                <ActionIcon
-                                    variant="subtle"
-                                    size="md"
-                                    onClick={() => spotlight.open()}
-                                >
-                                    <IconSearch size={16} />
-                                </ActionIcon>
-                            </Tooltip>
-                            <Tooltip label={t('toolbar.export') + ' (Cmd+E)'}>
-                                <ActionIcon variant="subtle" size="md" onClick={doExport}>
-                                    <IconDownload size={16} />
-                                </ActionIcon>
-                            </Tooltip>
-                            <Tooltip label={t('toolbar.quickAdd')}>
-                                <ActionIcon variant="subtle" size="md" onClick={openQuickAdd}>
-                                    <IconBolt size={16} />
-                                </ActionIcon>
-                            </Tooltip>
-                            <Tooltip label={t('toolbar.newEntry') + ' (Cmd+N)'}>
-                                <ActionIcon
-                                    variant="filled"
-                                    color="accent"
-                                    size="md"
-                                    onClick={openNew}
-                                >
-                                    <IconPlus size={16} />
-                                </ActionIcon>
-                            </Tooltip>
-                        </Group>
-                    </div>
-                </Group>
+                <div
+                    style={{
+                        position: 'absolute',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        pointerEvents: 'none',
+                    }}
+                >
+                    <span
+                        className="mono"
+                        style={{
+                            fontSize: 11,
+                            fontWeight: 600,
+                            color: 'var(--ink)',
+                            letterSpacing: '0.04em',
+                        }}
+                    >
+                        ◆ Pitch Tracker
+                    </span>
+                </div>
+                <div
+                    style={{
+                        marginLeft: 'auto',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        WebkitAppRegion: 'no-drag',
+                    }}
+                >
+                    <Tooltip label={t('cmd.placeholder') + ' (⌘K)'}>
+                        <GhostBtn onClick={() => spotlight.open()}>
+                            <span>Search</span>
+                            <Kbd>⌘K</Kbd>
+                        </GhostBtn>
+                    </Tooltip>
+                    <Tooltip label={t('toolbar.export') + ' (⌘E)'}>
+                        <GhostBtn onClick={doExport}>
+                            <span>Export</span>
+                        </GhostBtn>
+                    </Tooltip>
+                    <Tooltip label={t('toolbar.quickAdd')}>
+                        <GhostBtn onClick={openQuickAdd}>
+                            <span>⚡ Quick add</span>
+                        </GhostBtn>
+                    </Tooltip>
+                    <Tooltip label={t('toolbar.newEntry') + ' (⌘N)'}>
+                        <GhostBtn
+                            active
+                            onClick={openNew}
+                            style={{
+                                background: 'var(--ink)',
+                                color: 'var(--paper)',
+                                borderColor: 'var(--ink)',
+                            }}
+                        >
+                            <span>＋ New</span>
+                            <Kbd tone="dark">⌘N</Kbd>
+                        </GhostBtn>
+                    </Tooltip>
+                </div>
             </AppShell.Header>
 
             <AppShell.Navbar>
@@ -319,11 +371,25 @@ export function App() {
 
             <AppShell.Main
                 style={{
-                    backgroundColor:
-                        'light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-8))',
+                    backgroundColor: 'var(--paper)',
                 }}
             >
                 <UpdateBanner />
+                {/* Full-bleed pages fill the viewport minus chrome and manage
+                    their own internal scroll. Padded pages flow naturally and
+                    let the document scroll like a normal page. */}
+                <div
+                    style={
+                        isFullBleed
+                            ? {
+                                  height: 'calc(100vh - var(--app-shell-header-height, 36px) - var(--app-shell-footer-height, 28px))',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  overflow: 'hidden',
+                              }
+                            : { padding: '20px 24px' }
+                    }
+                >
                 <Routes>
                     <Route path="/" element={<Navigate to={ROUTES.dashboard} replace />} />
                     <Route
@@ -389,6 +455,7 @@ export function App() {
                     <Route path={ROUTES.settings} element={<SettingsPage />} />
                     <Route path="*" element={<Navigate to={ROUTES.dashboard} replace />} />
                 </Routes>
+                </div>
             </AppShell.Main>
 
             <AppShell.Footer>

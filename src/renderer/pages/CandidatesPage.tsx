@@ -1,20 +1,13 @@
 import {
     ActionIcon,
-    Anchor,
-    Badge,
-    Box,
-    Button,
     Center,
     Checkbox,
-    Group,
     Loader,
     MultiSelect,
     NumberInput,
     Select,
     Stack,
-    Text,
     TextInput,
-    Title,
     Tooltip,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
@@ -33,18 +26,14 @@ import { useTranslation } from 'react-i18next';
 import type { ApplicationRecord } from '../../preload/index';
 import type { SerializedJobCandidate } from '@shared/job-search';
 import { ALL_JOB_SOURCES } from '@shared/job-search';
+import { CandidateDrawer } from '../components/CandidateDrawer';
+import { GhostBtn } from '../components/primitives/GhostBtn';
+import { Label } from '../components/primitives/Label';
+import { MatchScore } from '../components/primitives/MatchScore';
 
 interface Props {
     onCandidateImported: (app: ApplicationRecord) => void;
     onGoToAgents: () => void;
-}
-
-function scoreColor(score: number): string {
-    if (score >= 90) return 'teal';
-    if (score >= 70) return 'green';
-    if (score >= 50) return 'yellow';
-    if (score > 0) return 'orange';
-    return 'gray';
 }
 
 function timeAgo(iso: string): string {
@@ -71,6 +60,7 @@ export function CandidatesPage({ onCandidateImported, onGoToAgents }: Props) {
         'score_desc',
     );
     const [searchText, setSearchText] = useState('');
+    const [drawerCandidate, setDrawerCandidate] = useState<SerializedJobCandidate | null>(null);
 
     const refresh = useCallback(async () => {
         setLoading(true);
@@ -171,14 +161,29 @@ export function CandidatesPage({ onCandidateImported, onGoToAgents }: Props) {
         return (
             <Center mih={400}>
                 <Stack align="center" gap="md" maw={420}>
-                    <IconSparkles size={48} style={{ opacity: 0.3 }} />
-                    <Stack align="center" gap={4}>
-                        <Title order={4}>{t('candidates.emptyTitle')}</Title>
-                        <Text c="dimmed" ta="center" size="sm">
+                    <IconSparkles size={48} style={{ opacity: 0.3, color: 'var(--ink-4)' }} />
+                    <div style={{ textAlign: 'center' }}>
+                        <div
+                            className="serif"
+                            style={{ fontSize: 19, fontWeight: 500, color: 'var(--ink)' }}
+                        >
+                            {t('candidates.emptyTitle')}
+                        </div>
+                        <div style={{ fontSize: 13, color: 'var(--ink-3)', marginTop: 4 }}>
                             {t('candidates.emptySubtitle')}
-                        </Text>
-                    </Stack>
-                    <Button onClick={onGoToAgents}>{t('nav.agents')}</Button>
+                        </div>
+                    </div>
+                    <GhostBtn
+                        active
+                        onClick={onGoToAgents}
+                        style={{
+                            background: 'var(--ink)',
+                            color: 'var(--paper)',
+                            borderColor: 'var(--ink)',
+                        }}
+                    >
+                        <span>{t('nav.agents')}</span>
+                    </GhostBtn>
                 </Stack>
             </Center>
         );
@@ -186,23 +191,43 @@ export function CandidatesPage({ onCandidateImported, onGoToAgents }: Props) {
 
     return (
         <Stack gap="md">
-            <Group justify="space-between" align="end" wrap="wrap">
-                <Stack gap={2}>
-                    <Title order={2}>{t('tabs.candidates')}</Title>
-                    <Text c="dimmed" size="sm">
-                        {filtered.length} of {candidates.filter((c) => c.status !== 'ignored').length}
-                    </Text>
-                </Stack>
-                <Button
-                    variant="subtle"
-                    size="xs"
-                    onClick={onGoToAgents}
+            <div>
+                <Label>{t('tabs.candidates')}</Label>
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'baseline',
+                        gap: 10,
+                        marginTop: 4,
+                    }}
                 >
-                    {t('nav.agents')}
-                </Button>
-            </Group>
+                    <span
+                        className="serif"
+                        style={{
+                            fontSize: 28,
+                            fontWeight: 500,
+                            color: 'var(--ink)',
+                            letterSpacing: '-0.02em',
+                            lineHeight: 1,
+                        }}
+                    >
+                        {t('tabs.candidates')}
+                    </span>
+                    <span
+                        className="mono"
+                        style={{ fontSize: 11, color: 'var(--ink-3)' }}
+                    >
+                        {filtered.length} of{' '}
+                        {candidates.filter((c) => c.status !== 'ignored').length}
+                    </span>
+                    <div style={{ flex: 1 }} />
+                    <GhostBtn onClick={onGoToAgents}>
+                        <span>{t('nav.agents')}</span>
+                    </GhostBtn>
+                </div>
+            </div>
 
-            <Group gap="xs" wrap="wrap">
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                 <TextInput
                     leftSection={<IconSearch size={14} />}
                     placeholder={t('candidates.filterSearchPlaceholder')}
@@ -256,135 +281,190 @@ export function CandidatesPage({ onCandidateImported, onGoToAgents }: Props) {
                     w={100}
                     placeholder={t('candidates.minScore')}
                 />
-            </Group>
+            </div>
 
             {selectedIds.size > 0 && (
-                <Group justify="flex-end" gap="xs">
-                    <Text size="xs" c="dimmed">
+                <div
+                    style={{
+                        display: 'flex',
+                        justifyContent: 'flex-end',
+                        alignItems: 'center',
+                        gap: 8,
+                    }}
+                >
+                    <span
+                        className="mono"
+                        style={{ fontSize: 11, color: 'var(--ink-3)' }}
+                    >
                         {t('candidates.selected', { count: selectedIds.size })}
-                    </Text>
-                    <Button
-                        size="xs"
-                        variant="light"
-                        leftSection={<IconStar size={14} />}
-                        onClick={bulkFavorite}
-                    >
-                        {t('candidates.star')}
-                    </Button>
-                    <Button
-                        size="xs"
-                        variant="light"
-                        color="gray"
-                        leftSection={<IconEyeOff size={14} />}
-                        onClick={bulkIgnore}
-                    >
-                        {t('candidates.dismiss')}
-                    </Button>
-                </Group>
+                    </span>
+                    <GhostBtn onClick={bulkFavorite}>
+                        <IconStar size={12} />
+                        <span>{t('candidates.star')}</span>
+                    </GhostBtn>
+                    <GhostBtn onClick={bulkIgnore}>
+                        <IconEyeOff size={12} />
+                        <span>{t('candidates.dismiss')}</span>
+                    </GhostBtn>
+                </div>
             )}
 
             {filtered.length === 0 ? (
-                <Center mih={240}>
-                    <Stack align="center" gap={4}>
-                        <Text c="dimmed" fw={500}>
-                            {t('candidates.emptyTitle')}
-                        </Text>
-                        <Text size="sm" c="dimmed">
-                            {t('candidates.emptySubtitle')}
-                        </Text>
-                    </Stack>
-                </Center>
-            ) : (
-                <Stack
-                    gap={0}
-                    p={4}
+                <div
                     style={{
-                        borderRadius: 10,
-                        border:
-                            '1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5))',
-                        backgroundColor:
-                            'light-dark(white, var(--mantine-color-dark-7))',
+                        padding: 32,
+                        textAlign: 'center',
+                        border: '1px solid var(--rule)',
+                        background: 'var(--card)',
                     }}
                 >
-                    <Group px="sm" py="xs">
+                    <div
+                        className="serif"
+                        style={{
+                            fontSize: 17,
+                            fontWeight: 500,
+                            color: 'var(--ink)',
+                        }}
+                    >
+                        {t('candidates.emptyTitle')}
+                    </div>
+                    <div
+                        style={{
+                            fontSize: 12.5,
+                            color: 'var(--ink-3)',
+                            marginTop: 6,
+                        }}
+                    >
+                        {t('candidates.emptySubtitle')}
+                    </div>
+                </div>
+            ) : (
+                <div
+                    style={{
+                        border: '1px solid var(--rule)',
+                        background: 'var(--card)',
+                    }}
+                >
+                    {/* header row */}
+                    <div
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            padding: '6px 12px',
+                            borderBottom: '1px solid var(--rule-strong)',
+                            background: 'var(--paper-2)',
+                        }}
+                    >
                         <Checkbox
                             size="xs"
                             checked={allSelected}
                             indeterminate={!allSelected && selectedIds.size > 0}
                             onChange={toggleSelectAll}
                         />
-                        <Text size="xs" c="dimmed">
-                            {filtered.length} {filtered.length === 1 ? 'match' : 'matches'}
-                        </Text>
-                    </Group>
+                        <Label>
+                            {filtered.length}{' '}
+                            {filtered.length === 1 ? 'match' : 'matches'}
+                        </Label>
+                    </div>
+
                     {filtered.map((c) => (
-                        <Box
+                        <div
                             key={c.id}
+                            onClick={() => setDrawerCandidate(c)}
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: 12,
-                                padding: '8px 12px',
-                                borderRadius: 6,
+                                padding: '10px 12px',
+                                borderBottom: '1px solid var(--rule)',
                                 cursor: 'pointer',
                                 transition: 'background 80ms',
+                                position: 'relative',
                             }}
-                            onClick={() => window.api.shell.openExternal(c.sourceUrl)}
                             onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor =
-                                    'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6))';
+                                e.currentTarget.style.background = 'var(--paper-2)';
                             }}
                             onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'transparent';
+                                e.currentTarget.style.background = 'transparent';
                             }}
                         >
-                            <Box onClick={(e) => e.stopPropagation()}>
+                            <div onClick={(e) => e.stopPropagation()}>
                                 <Checkbox
                                     size="xs"
                                     checked={selectedIds.has(c.id)}
                                     onChange={() => toggleSelect(c.id)}
                                 />
-                            </Box>
+                            </div>
 
-                            <Badge color={scoreColor(c.score)} variant="light" size="sm" w={42}>
-                                {c.score}
-                            </Badge>
+                            <div style={{ flexShrink: 0 }}>
+                                <MatchScore value={c.score} width={36} />
+                            </div>
 
-                            <Box style={{ flex: 1, minWidth: 0 }}>
-                                <Group gap={6} wrap="nowrap" align="baseline">
-                                    <Text size="sm" fw={600} lineClamp={1}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 6,
+                                    }}
+                                >
+                                    <span
+                                        style={{
+                                            fontSize: 13,
+                                            color: 'var(--ink)',
+                                            fontWeight: 600,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                            minWidth: 0,
+                                        }}
+                                    >
                                         {c.title || c.company || 'Untitled'}
-                                    </Text>
+                                    </span>
                                     {c.favorite && (
                                         <IconStarFilled
-                                            size={12}
-                                            color="var(--mantine-color-yellow-5)"
+                                            size={11}
+                                            style={{ color: 'var(--accent)', flexShrink: 0 }}
                                         />
                                     )}
-                                </Group>
-                                <Group gap={8} wrap="nowrap">
-                                    {c.company && (
-                                        <Text size="xs" c="dimmed" lineClamp={1}>
-                                            {c.company}
-                                        </Text>
-                                    )}
-                                    {c.location && (
-                                        <Text size="xs" c="dimmed" lineClamp={1}>
-                                            · {c.location}
-                                        </Text>
-                                    )}
-                                    <Text size="xs" c="dimmed">
-                                        · {timeAgo(c.discoveredAt)}
-                                    </Text>
-                                </Group>
+                                </div>
+                                <div
+                                    className="mono"
+                                    style={{
+                                        fontSize: 10.5,
+                                        color: 'var(--ink-3)',
+                                        letterSpacing: '0.02em',
+                                        marginTop: 1,
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                    }}
+                                >
+                                    {[c.company, c.location, timeAgo(c.discoveredAt)]
+                                        .filter(Boolean)
+                                        .join(' · ')}
+                                </div>
                                 {c.scoreReason && (
-                                    <Text size="xs" c="dimmed" lineClamp={1} mt={2}>
+                                    <div
+                                        style={{
+                                            fontSize: 11.5,
+                                            color: 'var(--ink-2)',
+                                            marginTop: 3,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                        }}
+                                    >
                                         {c.scoreReason}
-                                    </Text>
+                                    </div>
                                 )}
-                            </Box>
+                            </div>
 
-                            <Group gap={4} wrap="nowrap" onClick={(e) => e.stopPropagation()}>
+                            <div
+                                onClick={(e) => e.stopPropagation()}
+                                style={{ display: 'flex', gap: 4, flexShrink: 0 }}
+                            >
                                 <Tooltip
                                     label={
                                         c.favorite
@@ -395,7 +475,7 @@ export function CandidatesPage({ onCandidateImported, onGoToAgents }: Props) {
                                     <ActionIcon
                                         variant="subtle"
                                         size="sm"
-                                        color={c.favorite ? 'yellow' : 'gray'}
+                                        color="gray"
                                         onClick={async () => {
                                             await window.api.agents.updateCandidate(c.id, {
                                                 favorite: !c.favorite,
@@ -404,30 +484,45 @@ export function CandidatesPage({ onCandidateImported, onGoToAgents }: Props) {
                                         }}
                                     >
                                         {c.favorite ? (
-                                            <IconStarFilled size={14} />
+                                            <IconStarFilled
+                                                size={13}
+                                                style={{ color: 'var(--accent)' }}
+                                            />
                                         ) : (
-                                            <IconStar size={14} />
+                                            <IconStar size={13} />
                                         )}
                                     </ActionIcon>
                                 </Tooltip>
                                 {c.status === 'imported' ? (
-                                    <Badge
-                                        size="xs"
-                                        variant="light"
-                                        leftSection={<IconCheck size={10} />}
+                                    <span
+                                        className="mono"
+                                        style={{
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: 4,
+                                            padding: '2px 6px',
+                                            background: 'var(--moss)',
+                                            color: 'var(--paper)',
+                                            fontSize: 10,
+                                            fontWeight: 600,
+                                            letterSpacing: '0.02em',
+                                        }}
                                     >
+                                        <IconCheck size={10} />
                                         {t('candidates.imported')}
-                                    </Badge>
+                                    </span>
                                 ) : (
                                     <>
                                         <Tooltip label={t('candidates.addAsApplication')}>
                                             <ActionIcon
                                                 variant="subtle"
                                                 size="sm"
-                                                color="accent"
+                                                color="gray"
                                                 onClick={async () => {
                                                     const app =
-                                                        await window.api.agents.importCandidate(c.id);
+                                                        await window.api.agents.importCandidate(
+                                                            c.id,
+                                                        );
                                                     onCandidateImported(app);
                                                     notifications.show({
                                                         color: 'green',
@@ -438,7 +533,7 @@ export function CandidatesPage({ onCandidateImported, onGoToAgents }: Props) {
                                                     await refresh();
                                                 }}
                                             >
-                                                <IconPlus size={14} />
+                                                <IconPlus size={13} />
                                             </ActionIcon>
                                         </Tooltip>
                                         <Tooltip label={t('candidates.dismiss')}>
@@ -453,28 +548,62 @@ export function CandidatesPage({ onCandidateImported, onGoToAgents }: Props) {
                                                     await refresh();
                                                 }}
                                             >
-                                                <IconEyeOff size={14} />
+                                                <IconEyeOff size={13} />
                                             </ActionIcon>
                                         </Tooltip>
                                     </>
                                 )}
-                                <Anchor
-                                    size="xs"
-                                    c="dimmed"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        window.api.shell.openExternal(c.sourceUrl);
-                                    }}
-                                    href={c.sourceUrl}
-                                >
-                                    <IconArrowUpRight size={14} />
-                                </Anchor>
-                            </Group>
-                        </Box>
+                                <Tooltip label="Zur Quelle">
+                                    <ActionIcon
+                                        variant="subtle"
+                                        size="sm"
+                                        color="gray"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            window.api.shell.openExternal(c.sourceUrl);
+                                        }}
+                                    >
+                                        <IconArrowUpRight size={13} />
+                                    </ActionIcon>
+                                </Tooltip>
+                            </div>
+                        </div>
                     ))}
-                </Stack>
+                </div>
             )}
+            <CandidateDrawer
+                candidate={
+                    drawerCandidate
+                        ? candidates.find((c) => c.id === drawerCandidate.id) ?? drawerCandidate
+                        : null
+                }
+                opened={!!drawerCandidate}
+                onClose={() => setDrawerCandidate(null)}
+                onImport={async (cand) => {
+                    const app = await window.api.agents.importCandidate(cand.id);
+                    onCandidateImported(app);
+                    notifications.show({
+                        color: 'green',
+                        message: t('candidates.candidateAdded', {
+                            name: cand.company || cand.title,
+                        }),
+                    });
+                    setDrawerCandidate(null);
+                    await refresh();
+                }}
+                onDismiss={async (cand) => {
+                    await window.api.agents.updateCandidate(cand.id, { status: 'ignored' });
+                    setDrawerCandidate(null);
+                    await refresh();
+                }}
+                onToggleFavorite={async (cand) => {
+                    await window.api.agents.updateCandidate(cand.id, {
+                        favorite: !cand.favorite,
+                    });
+                    await refresh();
+                }}
+            />
         </Stack>
     );
 }

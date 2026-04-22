@@ -1,31 +1,21 @@
-import {
-    ActionIcon,
-    Badge,
-    Box,
-    Button,
-    Group,
-    SimpleGrid,
-    Stack,
-    Text,
-    Title,
-    Tooltip,
-    UnstyledButton,
-} from '@mantine/core';
+import { SimpleGrid, UnstyledButton } from '@mantine/core';
 import {
     IconArrowRight,
     IconCalendarClock,
     IconCheck,
-    IconClock,
     IconMailQuestion,
     IconSparkles,
     IconTargetArrow,
-    IconTrendingUp,
-    IconX,
 } from '@tabler/icons-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ApplicationRecord } from '../../preload/index';
+import type { ApplicationStatus } from '@shared/application';
 import type { SerializedJobCandidate } from '@shared/job-search';
+import { GhostBtn } from '../components/primitives/GhostBtn';
+import { Label } from '../components/primitives/Label';
+import { MatchScore } from '../components/primitives/MatchScore';
+import { StageGlyph } from '../components/primitives/StageGlyph';
 
 type PageKey = 'dashboard' | 'applications' | 'candidates' | 'agents' | 'settings';
 
@@ -38,31 +28,40 @@ interface Props {
     onOpenApplication: (app: ApplicationRecord) => void;
 }
 
-function scoreColor(score: number): string {
-    if (score >= 90) return 'teal';
-    if (score >= 70) return 'green';
-    if (score >= 50) return 'yellow';
-    if (score > 0) return 'orange';
-    return 'gray';
-}
-
+/**
+ * Action row: a dense, paper-styled line item for things that need the user's
+ * attention. Icon tag on the left, title + subtitle in the middle, right-aligned
+ * status/badge, chevron on the far right.
+ */
 function ActionRow({
-    icon,
-    iconColor,
+    tag,
     title,
     subtitle,
     rightLabel,
-    rightColor,
+    rightTone,
+    status,
     onClick,
 }: {
-    icon: React.ReactNode;
-    iconColor: string;
+    tag?: React.ReactNode;
     title: string;
     subtitle?: string;
     rightLabel?: string;
-    rightColor?: string;
+    rightTone?: 'accent' | 'moss' | 'rust' | 'ink';
+    status?: ApplicationStatus;
     onClick: () => void;
 }) {
+    const rightBg =
+        rightTone === 'moss'
+            ? 'var(--moss)'
+            : rightTone === 'rust'
+              ? 'var(--rust)'
+              : rightTone === 'accent'
+                ? 'var(--accent)'
+                : rightTone === 'ink'
+                  ? 'var(--ink)'
+                  : 'var(--paper-2)';
+    const rightColor = rightTone ? 'var(--paper)' : 'var(--ink-2)';
+
     return (
         <UnstyledButton
             onClick={onClick}
@@ -71,106 +70,165 @@ function ActionRow({
                 alignItems: 'center',
                 gap: 12,
                 padding: '10px 12px',
-                borderRadius: 8,
                 width: '100%',
-                transition: 'background 120ms',
+                borderBottom: '1px solid var(--rule)',
+                background: 'transparent',
+                transition: 'background 80ms',
             }}
             onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor =
-                    'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6))';
+                e.currentTarget.style.background = 'var(--paper-2)';
             }}
             onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.background = 'transparent';
             }}
         >
-            <Box
-                w={32}
-                h={32}
-                style={{
-                    borderRadius: 6,
-                    backgroundColor: `var(--mantine-color-${iconColor}-1)`,
-                    color: `var(--mantine-color-${iconColor}-7)`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                }}
-            >
-                {icon}
-            </Box>
-            <Stack gap={0} style={{ flex: 1, minWidth: 0 }}>
-                <Text size="sm" fw={500} lineClamp={1}>
-                    {title}
-                </Text>
-                {subtitle && (
-                    <Text size="xs" c="dimmed" lineClamp={1}>
-                        {subtitle}
-                    </Text>
-                )}
-            </Stack>
-            {rightLabel && (
-                <Badge size="sm" variant="light" color={rightColor || 'gray'}>
-                    {rightLabel}
-                </Badge>
+            {status ? (
+                <div style={{ flexShrink: 0 }}>
+                    <StageGlyph status={status} size={11} />
+                </div>
+            ) : (
+                <div
+                    style={{
+                        width: 22,
+                        height: 22,
+                        flexShrink: 0,
+                        background: 'var(--card)',
+                        border: '1px solid var(--rule-strong)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'var(--ink-2)',
+                    }}
+                >
+                    {tag}
+                </div>
             )}
-            <IconArrowRight size={14} style={{ opacity: 0.3 }} />
+            <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                <div
+                    style={{
+                        fontSize: 13,
+                        color: 'var(--ink)',
+                        fontWeight: 500,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                    }}
+                >
+                    {title}
+                </div>
+                {subtitle && (
+                    <div
+                        style={{
+                            fontSize: 11,
+                            color: 'var(--ink-3)',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                        }}
+                    >
+                        {subtitle}
+                    </div>
+                )}
+            </div>
+            {rightLabel && (
+                <span
+                    className="mono"
+                    style={{
+                        fontSize: 10.5,
+                        fontWeight: 600,
+                        padding: '2px 6px',
+                        background: rightBg,
+                        color: rightColor,
+                        letterSpacing: '0.02em',
+                        flexShrink: 0,
+                    }}
+                >
+                    {rightLabel}
+                </span>
+            )}
+            <IconArrowRight size={12} style={{ color: 'var(--ink-4)', flexShrink: 0 }} />
         </UnstyledButton>
     );
 }
 
 function SectionHeader({ title, count }: { title: string; count?: number }) {
     return (
-        <Group gap={8} mb="xs">
-            <Text size="xs" fw={600} c="dimmed" tt="uppercase" style={{ letterSpacing: '0.05em' }}>
+        <div
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                marginBottom: 8,
+            }}
+        >
+            <Label>
                 {title}
-            </Text>
-            {count !== undefined && count > 0 && (
-                <Badge size="xs" variant="light" color="gray">
-                    {count}
-                </Badge>
-            )}
-        </Group>
+                {count !== undefined && count > 0 ? ` · ${count}` : ''}
+            </Label>
+            <div style={{ flex: 1, height: 1, background: 'var(--rule)' }} />
+        </div>
     );
 }
 
+/**
+ * KPI tile: paper surface with Label + serif numeric value. Click-through
+ * supported for the "total" tile that jumps to Applications.
+ */
 function StatTile({
     label,
     value,
-    icon,
-    color = 'gray',
+    sub,
     onClick,
 }: {
     label: string;
     value: string | number;
-    icon: React.ReactNode;
-    color?: string;
+    sub?: string;
     onClick?: () => void;
 }) {
     const body = (
-        <Box
-            p="md"
+        <div
             style={{
-                borderRadius: 10,
-                border: '1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5))',
-                backgroundColor:
-                    'light-dark(white, var(--mantine-color-dark-7))',
+                padding: 16,
+                border: '1px solid var(--rule)',
+                background: 'var(--card)',
                 height: '100%',
             }}
         >
-            <Group justify="space-between" mb={6}>
-                <Text size="xs" c="dimmed" fw={500}>
-                    {label}
-                </Text>
-                <Box style={{ color: `var(--mantine-color-${color}-5)`, opacity: 0.7 }}>{icon}</Box>
-            </Group>
-            <Text size="xl" fw={700} style={{ lineHeight: 1 }}>
+            <Label>{label}</Label>
+            <div
+                className="serif tnum"
+                style={{
+                    fontSize: 32,
+                    fontWeight: 500,
+                    color: 'var(--ink)',
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1,
+                    marginTop: 8,
+                }}
+            >
                 {value}
-            </Text>
-        </Box>
+            </div>
+            {sub && (
+                <div
+                    className="mono"
+                    style={{
+                        fontSize: 10,
+                        color: 'var(--ink-4)',
+                        letterSpacing: '0.02em',
+                        marginTop: 6,
+                    }}
+                >
+                    {sub}
+                </div>
+            )}
+        </div>
     );
     if (onClick) {
         return (
-            <UnstyledButton onClick={onClick} style={{ width: '100%', textAlign: 'left' }}>
+            <UnstyledButton
+                onClick={onClick}
+                style={{ width: '100%', textAlign: 'left', height: '100%' }}
+            >
                 {body}
             </UnstyledButton>
         );
@@ -188,7 +246,7 @@ export function DashboardPage({
     const [candidates, setCandidates] = useState<SerializedJobCandidate[]>([]);
 
     useEffect(() => {
-        window.api.agents.listCandidates(0).then(setCandidates).catch(() => { });
+        window.api.agents.listCandidates(0).then(setCandidates).catch(() => {});
     }, []);
 
     const data = useMemo(() => {
@@ -201,7 +259,6 @@ export function DashboardPage({
                 a.status === 'offer_received',
         ).length;
         const accepted = applications.filter((a) => a.status === 'accepted').length;
-        const rejected = applications.filter((a) => a.status === 'rejected').length;
         const scored = applications.filter((a) => a.matchScore > 0);
         const avgMatch =
             scored.length > 0
@@ -232,14 +289,12 @@ export function DashboardPage({
             applied,
             interviewing,
             accepted,
-            rejected,
             avgMatch,
             followUps,
             pendingOffers,
             interviewsSoon,
             topCandidates,
             actionCount,
-            newCandidatesCount: newCandidates.length,
         };
     }, [applications, candidates]);
 
@@ -256,105 +311,167 @@ export function DashboardPage({
 
     if (applications.length === 0 && candidates.length === 0) {
         return (
-            <Stack mih={500} align="center" justify="center" gap="md">
-                <Box
-                    w={56}
-                    h={56}
+            <div
+                style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: 500,
+                    gap: 16,
+                }}
+            >
+                <div
                     style={{
-                        borderRadius: 14,
-                        background:
-                            'linear-gradient(135deg, var(--mantine-color-accent-5) 0%, var(--mantine-color-accent-7) 100%)',
+                        width: 56,
+                        height: 56,
+                        background: 'var(--accent)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: 'white',
+                        color: 'var(--ink)',
                     }}
                 >
                     <IconSparkles size={28} />
-                </Box>
-                <Stack align="center" gap={4} maw={420}>
-                    <Title order={3}>{t('dashboard.welcomeTitle')}</Title>
-                    <Text c="dimmed" ta="center" size="sm">
-                        {t('dashboard.welcomeSubtitle')}
-                    </Text>
-                </Stack>
-                <Group>
-                    <Button onClick={onNewEntry}>{t('toolbar.newEntry')}</Button>
-                    <Button
-                        variant="subtle"
-                        onClick={() => onNavigate('agents')}
+                </div>
+                <div style={{ textAlign: 'center', maxWidth: 420 }}>
+                    <div
+                        className="serif"
+                        style={{
+                            fontSize: 22,
+                            fontWeight: 500,
+                            color: 'var(--ink)',
+                            letterSpacing: '-0.015em',
+                            marginBottom: 6,
+                        }}
                     >
-                        {t('nav.agents')}
-                    </Button>
-                </Group>
-            </Stack>
+                        {t('dashboard.welcomeTitle')}
+                    </div>
+                    <div style={{ fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.5 }}>
+                        {t('dashboard.welcomeSubtitle')}
+                    </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <GhostBtn
+                        active
+                        onClick={onNewEntry}
+                        style={{
+                            background: 'var(--ink)',
+                            color: 'var(--paper)',
+                            borderColor: 'var(--ink)',
+                        }}
+                    >
+                        <span>＋ {t('toolbar.newEntry')}</span>
+                    </GhostBtn>
+                    <GhostBtn onClick={() => onNavigate('agents')}>
+                        <span>{t('nav.agents')}</span>
+                    </GhostBtn>
+                </div>
+            </div>
         );
     }
 
     return (
-        <Stack gap="xl" maw={960}>
-            <Stack gap={2}>
-                <Title order={2}>{t('dashboard.title')}</Title>
-                <Text c="dimmed" size="sm">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+            {/* masthead */}
+            <div>
+                <Label>Inbox</Label>
+                <div
+                    className="serif"
+                    style={{
+                        fontSize: 28,
+                        fontWeight: 500,
+                        color: 'var(--ink)',
+                        letterSpacing: '-0.02em',
+                        marginTop: 4,
+                        lineHeight: 1.05,
+                    }}
+                >
+                    {t('dashboard.title')}
+                </div>
+                <div
+                    className="mono"
+                    style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 4 }}
+                >
                     {t('dashboard.subtitle')}
-                </Text>
-            </Stack>
+                </div>
+            </div>
 
-            <Box>
-                <SectionHeader title={t('dashboard.sectionToday')} count={data.actionCount} />
+            {/* Today */}
+            <div>
+                <SectionHeader
+                    title={t('dashboard.sectionToday')}
+                    count={data.actionCount}
+                />
                 {data.actionCount === 0 ? (
-                    <Box
-                        p="lg"
+                    <div
                         style={{
-                            borderRadius: 10,
-                            border:
-                                '1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5))',
+                            padding: 22,
+                            border: '1px solid var(--rule)',
+                            background: 'var(--card)',
                             textAlign: 'center',
                         }}
                     >
-                        <Group justify="center" gap="xs">
-                            <IconCheck size={18} color="var(--mantine-color-green-5)" />
-                            <Text size="sm" fw={500}>
+                        <div
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 8,
+                            }}
+                        >
+                            <IconCheck
+                                size={16}
+                                style={{ color: 'var(--moss)' }}
+                            />
+                            <span
+                                className="serif"
+                                style={{
+                                    fontSize: 17,
+                                    fontWeight: 500,
+                                    color: 'var(--ink)',
+                                }}
+                            >
                                 {t('dashboard.allClearTitle')}
-                            </Text>
-                        </Group>
-                        <Text size="xs" c="dimmed" mt={4}>
+                            </span>
+                        </div>
+                        <div
+                            style={{
+                                fontSize: 12.5,
+                                color: 'var(--ink-3)',
+                                marginTop: 6,
+                            }}
+                        >
                             {t('dashboard.allClearSubtitle')}
-                        </Text>
-                    </Box>
+                        </div>
+                    </div>
                 ) : (
-                    <Stack
-                        gap={2}
-                        p={6}
+                    <div
                         style={{
-                            borderRadius: 10,
-                            border:
-                                '1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5))',
-                            backgroundColor:
-                                'light-dark(white, var(--mantine-color-dark-7))',
+                            border: '1px solid var(--rule)',
+                            background: 'var(--card)',
                         }}
                     >
                         {data.pendingOffers.map((app) => (
                             <ActionRow
                                 key={`offer-${app.id}`}
-                                icon={<IconTargetArrow size={16} />}
-                                iconColor="teal"
-                                title={`${app.companyName || '-'} - ${app.jobTitle || '-'}`}
+                                tag={<IconTargetArrow size={12} />}
+                                status={app.status}
+                                title={`${app.companyName || '—'} · ${app.jobTitle || '—'}`}
                                 subtitle={t('dashboard.pendingDecision')}
                                 rightLabel={t('status.offer_received')}
-                                rightColor="teal"
+                                rightTone="moss"
                                 onClick={() => onOpenApplication(app)}
                             />
                         ))}
                         {data.interviewsSoon.map((app) => (
                             <ActionRow
                                 key={`int-${app.id}`}
-                                icon={<IconCalendarClock size={16} />}
-                                iconColor="violet"
-                                title={`${app.companyName || '-'} - ${app.jobTitle || '-'}`}
+                                tag={<IconCalendarClock size={12} />}
+                                status={app.status}
+                                title={`${app.companyName || '—'} · ${app.jobTitle || '—'}`}
                                 subtitle={t('dashboard.interviewsSoon')}
                                 rightLabel={t(`status.${app.status}`)}
-                                rightColor="violet"
+                                rightTone="rust"
                                 onClick={() => onOpenApplication(app)}
                             />
                         ))}
@@ -366,12 +483,12 @@ export function DashboardPage({
                             return (
                                 <ActionRow
                                     key={`fu-${app.id}`}
-                                    icon={<IconMailQuestion size={16} />}
-                                    iconColor="yellow"
-                                    title={`${app.companyName || '-'} - ${app.jobTitle || '-'}`}
+                                    tag={<IconMailQuestion size={12} />}
+                                    status={app.status}
+                                    title={`${app.companyName || '—'} · ${app.jobTitle || '—'}`}
                                     subtitle={t('dashboard.followUpsHint')}
                                     rightLabel={`${days}d`}
-                                    rightColor="yellow"
+                                    rightTone="accent"
                                     onClick={() => onOpenApplication(app)}
                                 />
                             );
@@ -379,67 +496,58 @@ export function DashboardPage({
                         {data.topCandidates.slice(0, 5).map((c) => (
                             <ActionRow
                                 key={`c-${c.id}`}
-                                icon={<IconSparkles size={16} />}
-                                iconColor="accent"
+                                tag={<IconSparkles size={12} />}
                                 title={c.title || c.company || 'Untitled'}
                                 subtitle={c.company}
                                 rightLabel={`${c.score}`}
-                                rightColor={scoreColor(c.score)}
+                                rightTone={
+                                    c.score >= 80
+                                        ? 'moss'
+                                        : c.score >= 60
+                                          ? 'accent'
+                                          : 'ink'
+                                }
                                 onClick={() => onNavigate('candidates')}
                             />
                         ))}
-                    </Stack>
+                    </div>
                 )}
-            </Box>
+            </div>
 
-            <Box>
+            {/* Stats */}
+            <div>
                 <SectionHeader title={t('dashboard.sectionStats')} />
                 <SimpleGrid cols={{ base: 2, sm: 3, md: 5 }} spacing="sm">
                     <StatTile
                         label={t('dashboard.total')}
                         value={data.total}
-                        icon={<IconClock size={14} />}
                         onClick={() => onNavigate('applications')}
                     />
-                    <StatTile
-                        label={t('dashboard.applied')}
-                        value={data.applied}
-                        icon={<IconMailQuestion size={14} />}
-                        color="blue"
-                    />
+                    <StatTile label={t('dashboard.applied')} value={data.applied} />
                     <StatTile
                         label={t('dashboard.interviewing')}
                         value={data.interviewing}
-                        icon={<IconCalendarClock size={14} />}
-                        color="violet"
                     />
                     <StatTile
                         label={t('dashboard.accepted')}
                         value={data.accepted}
-                        icon={<IconCheck size={14} />}
-                        color="green"
                     />
                     <StatTile
                         label={t('dashboard.avgMatch')}
                         value={data.avgMatch > 0 ? data.avgMatch : t('dashboard.emptyStat')}
-                        icon={<IconTrendingUp size={14} />}
-                        color="teal"
+                        sub={data.avgMatch > 0 ? '/ 100' : undefined}
                     />
                 </SimpleGrid>
-            </Box>
+            </div>
 
+            {/* Recent activity */}
             {recentActivity.length > 0 && (
-                <Box>
+                <div>
                     <SectionHeader title={t('dashboard.sectionActivity')} />
-                    <Stack
-                        gap={0}
-                        p={4}
+                    <div
                         style={{
-                            borderRadius: 10,
-                            border:
-                                '1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5))',
-                            backgroundColor:
-                                'light-dark(white, var(--mantine-color-dark-7))',
+                            border: '1px solid var(--rule)',
+                            background: 'var(--card)',
                         }}
                     >
                         {recentActivity.map((app) => (
@@ -449,40 +557,76 @@ export function DashboardPage({
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    padding: '8px 12px',
-                                    borderRadius: 6,
-                                    transition: 'background 120ms',
+                                    gap: 12,
+                                    padding: '10px 12px',
+                                    width: '100%',
+                                    borderBottom: '1px solid var(--rule)',
+                                    background: 'transparent',
+                                    transition: 'background 80ms',
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.currentTarget.style.backgroundColor =
-                                        'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6))';
+                                    e.currentTarget.style.background = 'var(--paper-2)';
                                 }}
                                 onMouseLeave={(e) => {
-                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                    e.currentTarget.style.background = 'transparent';
                                 }}
                             >
-                                <Stack gap={0} style={{ minWidth: 0 }}>
-                                    <Text size="sm" fw={500} lineClamp={1}>
-                                        {app.companyName || '-'}
-                                    </Text>
-                                    <Text size="xs" c="dimmed" lineClamp={1}>
-                                        {app.jobTitle || '-'}
-                                    </Text>
-                                </Stack>
-                                <Group gap="xs" wrap="nowrap">
-                                    <Badge size="xs" variant="light">
-                                        {t(`status.${app.status}`)}
-                                    </Badge>
-                                    <Text size="xs" c="dimmed" style={{ minWidth: 70, textAlign: 'right' }}>
-                                        {new Date(app.updatedAt).toLocaleDateString()}
-                                    </Text>
-                                </Group>
+                                <StageGlyph status={app.status} size={10} />
+                                <div
+                                    style={{
+                                        flex: 1,
+                                        minWidth: 0,
+                                        textAlign: 'left',
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            fontSize: 13,
+                                            color: 'var(--ink)',
+                                            fontWeight: 500,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                        }}
+                                    >
+                                        {app.companyName || '—'}
+                                    </div>
+                                    <div
+                                        style={{
+                                            fontSize: 11,
+                                            color: 'var(--ink-3)',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                        }}
+                                    >
+                                        {app.jobTitle || '—'}
+                                    </div>
+                                </div>
+                                {app.matchScore > 0 && (
+                                    <MatchScore
+                                        value={app.matchScore}
+                                        width={36}
+                                        showValue={false}
+                                    />
+                                )}
+                                <span
+                                    className="mono"
+                                    style={{
+                                        fontSize: 10,
+                                        color: 'var(--ink-3)',
+                                        letterSpacing: '0.02em',
+                                        minWidth: 70,
+                                        textAlign: 'right',
+                                    }}
+                                >
+                                    {new Date(app.updatedAt).toLocaleDateString()}
+                                </span>
                             </UnstyledButton>
                         ))}
-                    </Stack>
-                </Box>
+                    </div>
+                </div>
             )}
-        </Stack>
+        </div>
     );
 }

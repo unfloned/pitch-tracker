@@ -1,50 +1,56 @@
+import { Switch, Tooltip } from '@mantine/core';
 import {
-    ActionIcon,
-    Badge,
-    Box,
-    Button,
-    Code,
-    Group,
-    Menu,
-    Stack,
-    Switch,
-    Text,
-    Tooltip,
-} from '@mantine/core';
-import {
-    IconCalendar,
-    IconClock,
-    IconDotsVertical,
     IconPlayerPlay,
     IconPlayerStop,
-    IconRobot,
+    IconPencil,
     IconTrash,
 } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import type { SerializedJobSearch } from '@shared/job-search';
+import { GhostBtn } from '../primitives/GhostBtn';
+import { Label } from '../primitives/Label';
+import { useContextMenu } from '../primitives/ContextMenu';
 
 function timeAgo(iso: string): string {
-    const diffMs = Date.now() - new Date(iso).getTime();
-    const minutes = Math.floor(diffMs / 60000);
-    if (minutes < 1) return 'just now';
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h`;
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
     const days = Math.floor(hours / 24);
-    if (days < 7) return `${days}d`;
+    if (days < 7) return `${days}d ago`;
     return new Date(iso).toLocaleDateString();
 }
 
-function timeUntil(iso: string | null, manualLabel: string): string {
-    if (!iso) return manualLabel;
-    const diffMs = new Date(iso).getTime() - Date.now();
-    if (diffMs <= 0) return 'now';
-    const minutes = Math.floor(diffMs / 60000);
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ${minutes % 60}m`;
+function timeUntil(iso: string | null, fallback: string): string {
+    if (!iso) return fallback;
+    const diff = new Date(iso).getTime() - Date.now();
+    if (diff <= 0) return 'now';
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `in ${mins}m`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `in ${hours}h`;
     const days = Math.floor(hours / 24);
-    return `${days}d`;
+    return `in ${days}d`;
+}
+
+/**
+ * Synthetic sparkline from a string seed. No historical run data available
+ * in the current schema; this visualises cadence via the search's identity.
+ * Replaced when agent run history is wired up.
+ */
+function sparklinePoints(seed: string, count = 40): number[] {
+    let h = 0;
+    for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
+    const vals: number[] = [];
+    for (let i = 0; i < count; i++) {
+        const s = Math.sin(i * 0.5 + h) * 0.45;
+        const c = Math.cos(i * 0.3 + h * 2) * 0.25;
+        const spike = i % 7 === 0 ? 0.3 : 0;
+        vals.push(Math.abs(s + c) + spike);
+    }
+    return vals;
 }
 
 interface Props {
@@ -67,159 +73,249 @@ export function SearchRow({
     onToggleEnabled,
 }: Props) {
     const { t } = useTranslation();
+    const { open: openContext, menu: contextMenu } = useContextMenu();
+    const spark = sparklinePoints(search.id);
 
     return (
-        <Box
-            onClick={onEdit}
-            style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '8px 12px',
-                borderRadius: 6,
-                cursor: 'pointer',
-                transition: 'background 80ms',
-                minHeight: 44,
-            }}
-            onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor =
-                    'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6))';
-            }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-            }}
-        >
-            <Box
-                w={28}
-                h={28}
-                style={{
-                    borderRadius: 6,
-                    backgroundColor: search.enabled
-                        ? 'var(--mantine-color-accent-1)'
-                        : 'light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5))',
-                    color: search.enabled
-                        ? 'var(--mantine-color-accent-7)'
-                        : 'light-dark(var(--mantine-color-gray-6), var(--mantine-color-gray-5))',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                }}
-            >
-                <IconRobot size={16} />
-            </Box>
-
-            <Box style={{ flex: 1, minWidth: 0 }}>
-                <Group gap={6} wrap="nowrap" align="baseline">
-                    <Text size="sm" fw={600} lineClamp={1}>
-                        {search.label}
-                    </Text>
-                    {isRunning && (
-                        <Badge color="blue" variant="filled" size="xs">
-                            {t('candidates.running')}
-                        </Badge>
-                    )}
-                    <Text size="xs" c="dimmed" lineClamp={1}>
-                        <Code style={{ fontSize: 11, padding: '1px 4px' }}>
-                            {search.keywords || t('candidates.any')}
-                        </Code>
-                    </Text>
-                </Group>
-                <Group gap={10} mt={2} wrap="nowrap">
-                    <Group gap={3} wrap="nowrap">
-                        {search.sources.slice(0, 4).map((src) => (
-                            <Badge
-                                key={src}
-                                size="xs"
-                                variant="light"
-                                color="gray"
-                                styles={{ root: { textTransform: 'none', fontWeight: 500 } }}
-                            >
-                                {t(`source.${src}`).split(' (')[0]}
-                            </Badge>
-                        ))}
-                        {search.sources.length > 4 && (
-                            <Badge size="xs" variant="light" color="gray">
-                                +{search.sources.length - 4}
-                            </Badge>
-                        )}
-                    </Group>
-                    <Group gap={3} wrap="nowrap">
-                        <IconClock size={11} style={{ opacity: 0.5 }} />
-                        <Text size="xs" c="dimmed">
-                            {t(`interval.${search.interval}`)}
-                        </Text>
-                    </Group>
-                    {search.enabled && search.interval !== 'manual' && (
-                        <Group gap={3} wrap="nowrap">
-                            <IconCalendar size={11} style={{ opacity: 0.5 }} />
-                            <Text size="xs" c="dimmed">
-                                {timeUntil(search.nextRunAt, t('interval.manual'))}
-                            </Text>
-                        </Group>
-                    )}
-                    {search.lastRunAt && (
-                        <Text size="xs" c="dimmed">
-                            · {timeAgo(search.lastRunAt)}
-                        </Text>
-                    )}
-                </Group>
-            </Box>
-
-            <Box onClick={(e) => e.stopPropagation()}>
-                <Switch
-                    size="xs"
-                    checked={search.enabled}
-                    onChange={(e) => onToggleEnabled(e.currentTarget.checked)}
-                />
-            </Box>
-
-            <Box onClick={(e) => e.stopPropagation()}>
-                {isRunning ? (
-                    <Button
-                        size="xs"
-                        variant="light"
-                        color="red"
-                        leftSection={<IconPlayerStop size={12} />}
-                        onClick={onCancel}
-                    >
-                        {t('candidates.cancelRun')}
-                    </Button>
-                ) : (
-                    <Button
-                        size="xs"
-                        variant="light"
-                        leftSection={<IconPlayerPlay size={12} />}
-                        onClick={onRun}
-                    >
-                        {t('candidates.runNow')}
-                    </Button>
-                )}
-            </Box>
-
-            <Box onClick={(e) => e.stopPropagation()}>
-                <Menu position="bottom-end" withArrow>
-                    <Menu.Target>
-                        <ActionIcon variant="subtle" size="sm">
-                            <IconDotsVertical size={14} />
-                        </ActionIcon>
-                    </Menu.Target>
-                    <Menu.Dropdown>
-                        <Menu.Item onClick={onEdit}>{t('common.edit')}</Menu.Item>
-                        <Menu.Item
-                            color="red"
-                            leftSection={<IconTrash size={14} />}
-                            onClick={() => {
-                                if (confirm(t('confirm.deleteSearch', { label: search.label }))) {
+        <>
+            {contextMenu}
+            <div
+                onClick={onEdit}
+                onContextMenu={(e) =>
+                    openContext(e, [
+                        {
+                            label: t('common.edit'),
+                            icon: <IconPencil size={13} />,
+                            onClick: onEdit,
+                        },
+                        {
+                            label: isRunning
+                                ? t('candidates.cancelRun')
+                                : t('candidates.runNow'),
+                            icon: isRunning ? (
+                                <IconPlayerStop size={13} />
+                            ) : (
+                                <IconPlayerPlay size={13} />
+                            ),
+                            onClick: isRunning ? onCancel : onRun,
+                        },
+                        {
+                            label: t('common.delete'),
+                            icon: <IconTrash size={13} />,
+                            danger: true,
+                            onClick: () => {
+                                if (
+                                    confirm(
+                                        t('confirm.deleteSearch', { label: search.label }),
+                                    )
+                                ) {
                                     onDelete();
                                 }
+                            },
+                        },
+                    ])
+                }
+                style={{
+                    background: 'var(--card)',
+                    border: '1px solid var(--rule)',
+                    cursor: 'pointer',
+                    transition: 'border-color 100ms',
+                }}
+                onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--rule-strong)';
+                }}
+                onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--rule)';
+                }}
+            >
+                {/* top row */}
+                <div
+                    style={{
+                        display: 'grid',
+                        gridTemplateColumns:
+                            '16px minmax(200px, 1fr) 110px 110px 120px auto',
+                        gap: 14,
+                        padding: '12px 16px',
+                        alignItems: 'center',
+                    }}
+                >
+                    {/* enabled dot */}
+                    <div
+                        style={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: '50%',
+                            background: isRunning
+                                ? 'var(--accent)'
+                                : search.enabled
+                                  ? 'var(--moss)'
+                                  : 'var(--rule-strong)',
+                        }}
+                    />
+
+                    {/* name + sources */}
+                    <div style={{ minWidth: 0 }}>
+                        <div
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                marginBottom: 2,
                             }}
                         >
-                            {t('common.delete')}
-                        </Menu.Item>
-                    </Menu.Dropdown>
-                </Menu>
-            </Box>
-        </Box>
+                            <span
+                                style={{
+                                    fontSize: 14,
+                                    color: 'var(--ink)',
+                                    fontWeight: 600,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                    minWidth: 0,
+                                }}
+                            >
+                                {search.label}
+                            </span>
+                            {isRunning && (
+                                <span
+                                    className="mono"
+                                    style={{
+                                        fontSize: 9.5,
+                                        fontWeight: 600,
+                                        padding: '1px 5px',
+                                        background: 'var(--accent)',
+                                        color: 'var(--ink)',
+                                        letterSpacing: '0.06em',
+                                    }}
+                                >
+                                    RUNNING
+                                </span>
+                            )}
+                        </div>
+                        <div
+                            className="mono"
+                            style={{
+                                fontSize: 10.5,
+                                color: 'var(--ink-3)',
+                                letterSpacing: '0.02em',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            {search.sources.slice(0, 4).map((s) => `[${s}]`).join(' ')}
+                            {search.sources.length > 4 && ` +${search.sources.length - 4}`}
+                            {search.keywords && (
+                                <span style={{ color: 'var(--ink-4)' }}>
+                                    {' · '}
+                                    {search.keywords}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* interval */}
+                    <div>
+                        <Label>Interval</Label>
+                        <div
+                            className="mono tnum"
+                            style={{
+                                fontSize: 12,
+                                color: 'var(--ink-2)',
+                                marginTop: 2,
+                                fontWeight: 500,
+                            }}
+                        >
+                            {t(`interval.${search.interval}`)}
+                        </div>
+                    </div>
+
+                    {/* last run */}
+                    <div>
+                        <Label>Last run</Label>
+                        <div
+                            className="mono"
+                            style={{
+                                fontSize: 11.5,
+                                color: 'var(--ink-3)',
+                                marginTop: 2,
+                            }}
+                        >
+                            {search.lastRunAt ? timeAgo(search.lastRunAt) : '—'}
+                        </div>
+                    </div>
+
+                    {/* next run */}
+                    <div>
+                        <Label>Next</Label>
+                        <div
+                            className="mono"
+                            style={{
+                                fontSize: 11.5,
+                                color: 'var(--ink-3)',
+                                marginTop: 2,
+                            }}
+                        >
+                            {search.enabled && search.interval !== 'manual'
+                                ? timeUntil(search.nextRunAt, t('interval.manual'))
+                                : t('interval.manual')}
+                        </div>
+                    </div>
+
+                    {/* actions */}
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                    >
+                        <Tooltip
+                            label={search.enabled ? 'Enabled' : 'Paused'}
+                        >
+                            <Switch
+                                size="xs"
+                                checked={search.enabled}
+                                onChange={(e) => onToggleEnabled(e.currentTarget.checked)}
+                            />
+                        </Tooltip>
+                        {isRunning ? (
+                            <GhostBtn onClick={onCancel}>
+                                <IconPlayerStop size={12} />
+                                <span>Stop</span>
+                            </GhostBtn>
+                        ) : (
+                            <GhostBtn onClick={onRun}>
+                                <IconPlayerPlay size={12} />
+                                <span>Run</span>
+                            </GhostBtn>
+                        )}
+                    </div>
+                </div>
+
+                {/* sparkline */}
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'flex-end',
+                        gap: 2,
+                        height: 24,
+                        padding: '0 16px 10px',
+                    }}
+                >
+                    {spark.map((v, i) => (
+                        <div
+                            key={i}
+                            style={{
+                                flex: 1,
+                                height: Math.max(2, v * 18),
+                                background:
+                                    i > spark.length - 5
+                                        ? 'var(--accent)'
+                                        : 'var(--ink-3)',
+                                opacity: search.enabled ? 0.55 : 0.25,
+                            }}
+                        />
+                    ))}
+                </div>
+            </div>
+        </>
     );
 }

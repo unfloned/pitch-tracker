@@ -1,31 +1,48 @@
 import { createTheme, MantineColorsTuple } from '@mantine/core';
+import { fonts } from './theme/tokens';
 
+/** Marigold-derived tuple (light→dark) tuned to the paper palette. */
 const accent: MantineColorsTuple = [
-    '#f0f4ff',
-    '#dce4ff',
-    '#b4c3ff',
-    '#8ba2ff',
-    '#6987ff',
-    '#5376ff',
-    '#476cff',
-    '#385ae6',
-    '#2d4fce',
-    '#1e41b7',
+    '#fdf6e5',
+    '#f9ead0',
+    '#f1d39f',
+    '#e8bb6a',
+    '#dba53b',
+    '#c98c1e',
+    '#b77612',
+    '#95600e',
+    '#744a0a',
+    '#543505',
+];
+
+/** Moss-derived tuple for positive/offer states. */
+const moss: MantineColorsTuple = [
+    '#f0f4ee',
+    '#dce5d9',
+    '#bccaad',
+    '#9caf80',
+    '#7f9757',
+    '#658341',
+    '#4f6a32',
+    '#3d5327',
+    '#2e3e1e',
+    '#1f2a15',
 ];
 
 export const theme = createTheme({
     primaryColor: 'accent',
-    colors: { accent },
-    defaultRadius: 'md',
-    fontFamily:
-        '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Oxygen, Ubuntu, sans-serif',
+    colors: { accent, moss },
+    defaultRadius: 4,
+    fontFamily: fonts.ui,
+    fontFamilyMonospace: fonts.mono,
     headings: {
-        fontWeight: '600',
+        fontFamily: fonts.display,
+        fontWeight: '500',
         sizes: {
-            h1: { fontSize: '2rem', lineHeight: '1.2' },
-            h2: { fontSize: '1.5rem', lineHeight: '1.3' },
-            h3: { fontSize: '1.25rem', lineHeight: '1.4' },
-            h4: { fontSize: '1.05rem', lineHeight: '1.4' },
+            h1: { fontSize: '2rem', lineHeight: '1.05', fontWeight: '500' },
+            h2: { fontSize: '1.5rem', lineHeight: '1.15', fontWeight: '500' },
+            h3: { fontSize: '1.25rem', lineHeight: '1.25', fontWeight: '500' },
+            h4: { fontSize: '1.05rem', lineHeight: '1.3', fontWeight: '600' },
         },
     },
     spacing: {
@@ -37,19 +54,23 @@ export const theme = createTheme({
     },
     components: {
         Button: {
-            defaultProps: {
-                radius: 'md',
-            },
+            defaultProps: { radius: 4 },
+            styles: { root: { fontWeight: 500 } },
         },
         Card: {
-            defaultProps: {
-                radius: 'lg',
-            },
+            defaultProps: { radius: 4, shadow: undefined, withBorder: true },
         },
         Paper: {
-            defaultProps: {
-                radius: 'lg',
-            },
+            defaultProps: { radius: 4, shadow: undefined },
+        },
+        Badge: {
+            defaultProps: { radius: 2 },
+        },
+        Modal: {
+            defaultProps: { radius: 0, shadow: 'none' },
+        },
+        Drawer: {
+            defaultProps: { radius: 0, shadow: 'none' },
         },
     },
 });

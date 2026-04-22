@@ -1,24 +1,31 @@
-import { Badge } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 import { ApplicationStatus } from '@shared/application';
+import { StageGlyph } from './primitives/StageGlyph';
 
-const COLORS: Record<ApplicationStatus, string> = {
-    draft: 'gray',
-    applied: 'blue',
-    in_review: 'cyan',
-    interview_scheduled: 'grape',
-    interviewed: 'violet',
-    offer_received: 'teal',
-    accepted: 'green',
-    rejected: 'red',
-    withdrawn: 'dark',
-};
-
+/**
+ * Status label with a geometric StageGlyph. Replaces colored Badge pills.
+ * Keeping the old component name so call sites don't need to change.
+ */
 export function StatusBadge({ status }: { status: ApplicationStatus }) {
     const { t } = useTranslation();
     return (
-        <Badge color={COLORS[status]} variant="light" radius="sm">
+        <span
+            style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '1px 6px',
+                borderRadius: 2,
+                border: '1px solid var(--rule)',
+                background: 'var(--paper-2)',
+                fontSize: 11,
+                fontWeight: 500,
+                color: 'var(--ink-2)',
+                lineHeight: '18px',
+            }}
+        >
+            <StageGlyph status={status} size={9} />
             {t(`status.${status}`)}
-        </Badge>
+        </span>
     );
 }

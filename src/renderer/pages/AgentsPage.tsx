@@ -1,4 +1,4 @@
-import { Box, Button, Center, Group, Loader, Stack, Text, Title } from '@mantine/core';
+import { Center, Loader, Stack, Text } from '@mantine/core';
 import { IconHistory, IconPlus, IconRobot, IconSettings } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -8,6 +8,8 @@ import { SearchRow } from '../components/agents/SearchRow';
 import { SearchFormDrawer } from '../components/agents/SearchFormDrawer';
 import { AgentProfileDrawer } from '../components/agents/AgentProfileDrawer';
 import { AgentRunLogDrawer } from '../components/agents/AgentRunLogDrawer';
+import { GhostBtn } from '../components/primitives/GhostBtn';
+import { Label } from '../components/primitives/Label';
 
 export function AgentsPage() {
     const { t } = useTranslation();
@@ -88,22 +90,30 @@ export function AgentsPage() {
         return (
             <Center mih={400}>
                 <Stack align="center" gap="md" maw={380}>
-                    <IconRobot size={48} style={{ opacity: 0.3 }} />
+                    <IconRobot size={48} style={{ opacity: 0.3, color: 'var(--ink-4)' }} />
                     <Stack align="center" gap={4}>
-                        <Title order={4}>{t('candidates.noSearchesTitle')}</Title>
-                        <Text c="dimmed" ta="center" size="sm">
+                        <Text size="lg" fw={500} className="serif" style={{ color: 'var(--ink)' }}>
+                            {t('candidates.noSearchesTitle')}
+                        </Text>
+                        <Text size="sm" ta="center" style={{ color: 'var(--ink-3)' }}>
                             {t('candidates.noSearchesSubtitle')}
                         </Text>
                     </Stack>
-                    <Button
-                        leftSection={<IconPlus size={16} />}
+                    <GhostBtn
+                        active
                         onClick={() => {
                             setEditing(null);
                             setFormOpen(true);
                         }}
+                        style={{
+                            background: 'var(--ink)',
+                            color: 'var(--paper)',
+                            borderColor: 'var(--ink)',
+                        }}
                     >
-                        {t('candidates.newSearch')}
-                    </Button>
+                        <IconPlus size={12} />
+                        <span>{t('candidates.newSearch')}</span>
+                    </GhostBtn>
                 </Stack>
 
                 <SearchFormDrawer
@@ -120,75 +130,83 @@ export function AgentsPage() {
     }
 
     return (
-        <Stack gap="md">
-            <Group justify="space-between" align="end" wrap="wrap">
-                <Stack gap={2}>
-                    <Title order={2}>{t('nav.agents')}</Title>
-                    <Text c="dimmed" size="sm">
-                        {searches.length} {searches.length === 1 ? 'agent' : 'agents'}
-                    </Text>
-                </Stack>
-                <Group gap="xs">
-                    <Button
-                        variant="subtle"
-                        size="xs"
-                        leftSection={<IconHistory size={14} />}
-                        onClick={() => setLogOpen(true)}
-                    >
-                        {t('candidates.runLog')}
-                    </Button>
-                    <Button
-                        variant="subtle"
-                        size="xs"
-                        leftSection={<IconSettings size={14} />}
-                        onClick={() => setProfileOpen(true)}
-                    >
-                        {t('candidates.profile')}
-                    </Button>
-                    <Button
-                        size="xs"
-                        leftSection={<IconPlus size={14} />}
-                        onClick={() => {
-                            setEditing(null);
-                            setFormOpen(true);
-                        }}
-                    >
-                        {t('candidates.newSearch')}
-                    </Button>
-                </Group>
-            </Group>
+        <>
+            {/* header */}
+            <div
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    marginBottom: 18,
+                }}
+            >
+                <span
+                    className="serif"
+                    style={{
+                        fontSize: 22,
+                        fontWeight: 500,
+                        color: 'var(--ink)',
+                        letterSpacing: '-0.015em',
+                    }}
+                >
+                    {t('nav.agents')}
+                </span>
+                <span className="mono" style={{ fontSize: 11, color: 'var(--ink-3)' }}>
+                    {searches.length} defined · {grouped.active.length} active
+                </span>
+                <div style={{ flex: 1 }} />
+                <GhostBtn onClick={() => setLogOpen(true)}>
+                    <IconHistory size={12} />
+                    <span>{t('candidates.runLog')}</span>
+                </GhostBtn>
+                <GhostBtn onClick={() => setProfileOpen(true)}>
+                    <IconSettings size={12} />
+                    <span>{t('candidates.profile')}</span>
+                </GhostBtn>
+                <GhostBtn
+                    active
+                    onClick={() => {
+                        setEditing(null);
+                        setFormOpen(true);
+                    }}
+                    style={{
+                        background: 'var(--ink)',
+                        color: 'var(--paper)',
+                        borderColor: 'var(--ink)',
+                    }}
+                >
+                    <IconPlus size={12} />
+                    <span>{t('candidates.newSearch')}</span>
+                </GhostBtn>
+            </div>
 
-            <Stack gap="lg">
+            {/* groups */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
                 {[
                     { key: 'active', items: grouped.active, label: t('applications.groupActive') },
                     { key: 'paused', items: grouped.paused, label: t('applications.groupDraft') },
                 ].map((group) => {
                     if (group.items.length === 0) return null;
                     return (
-                        <Box key={group.key}>
-                            <Group gap={6} mb="xs">
-                                <Text
-                                    size="xs"
-                                    fw={600}
-                                    c="dimmed"
-                                    tt="uppercase"
-                                    style={{ letterSpacing: '0.05em' }}
-                                >
-                                    {group.label}
-                                </Text>
-                                <Text size="xs" c="dimmed">
-                                    · {group.items.length}
-                                </Text>
-                            </Group>
-                            <Stack
-                                gap={0}
-                                p={4}
+                        <div key={group.key}>
+                            <div
                                 style={{
-                                    borderRadius: 10,
-                                    border:
-                                        '1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5))',
-                                    backgroundColor:
-                                        'light-dark(white, var(--mantine-color-dark-7))',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 10,
+                                    marginBottom: 8,
+                                }}
+                            >
+                                <Label>
+                                    {group.label} · {group.items.length}
+                                </Label>
+                                <div style={{ flex: 1, height: 1, background: 'var(--rule)' }} />
+                            </div>
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 10,
                                 }}
                             >
                                 {group.items.map((s) => (
@@ -212,11 +230,11 @@ export function AgentsPage() {
                                         }}
                                     />
                                 ))}
-                            </Stack>
-                        </Box>
+                            </div>
+                        </div>
                     );
                 })}
-            </Stack>
+            </div>
 
             <SearchFormDrawer
                 opened={formOpen}
@@ -229,6 +247,6 @@ export function AgentsPage() {
             />
             <AgentProfileDrawer opened={profileOpen} onClose={() => setProfileOpen(false)} />
             <AgentRunLogDrawer opened={logOpen} onClose={() => setLogOpen(false)} />
-        </Stack>
+        </>
     );
 }

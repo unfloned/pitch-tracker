@@ -6,7 +6,10 @@ import {
     deleteApplication,
     getApplication,
     listApplications,
+    listApplicationEvents,
+    listEventsForApplication,
     updateApplication,
+    type ApplicationEventRow,
 } from './db';
 import { exportToExcel, type ExportLabels } from './export';
 import {
@@ -69,6 +72,12 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     ipcMain.handle('applications:delete', (_evt, id: string) => {
         deleteApplication(id);
         return { ok: true };
+    });
+    ipcMain.handle('applications:events:list', () => {
+        return listApplicationEvents().map(serializeEvent);
+    });
+    ipcMain.handle('applications:events:forApp', (_evt, id: string) => {
+        return listEventsForApplication(id).map(serializeEvent);
     });
 
     ipcMain.handle('llm:extract', async (_evt, url: string) => extractJobData(url));
@@ -208,6 +217,16 @@ function serializeApplication(row: any) {
         appliedAt: row.appliedAt ? row.appliedAt.toISOString() : null,
         createdAt: row.createdAt.toISOString(),
         updatedAt: row.updatedAt.toISOString(),
+    };
+}
+
+function serializeEvent(row: ApplicationEventRow) {
+    return {
+        id: row.id,
+        applicationId: row.applicationId,
+        fromStatus: row.fromStatus,
+        toStatus: row.toStatus,
+        changedAt: row.changedAt.toISOString(),
     };
 }
 

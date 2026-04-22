@@ -228,19 +228,16 @@ export function ApplicationList({
             ) : (
                 <Box
                     style={{
-                        borderRadius: 8,
                         overflow: 'hidden',
-                        border:
-                            '1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))',
+                        border: '1px solid var(--rule)',
+                        background: 'var(--card)',
                     }}
                 >
                     <Table verticalSpacing="md" horizontalSpacing="md" highlightOnHover>
                         <Table.Thead
                             style={{
-                                backgroundColor:
-                                    'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-6))',
-                                borderBottom:
-                                    '1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))',
+                                background: 'var(--paper-2)',
+                                borderBottom: '1px solid var(--rule-strong)',
                             }}
                         >
                             <Table.Tr>

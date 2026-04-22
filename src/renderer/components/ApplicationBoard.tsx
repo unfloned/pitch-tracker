@@ -71,9 +71,8 @@ export function ApplicationBoard({ rows, onEdit, onStatusChange }: Props) {
                             style={{
                                 width: 260,
                                 flexShrink: 0,
-                                borderRadius: 10,
-                                backgroundColor:
-                                    'light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-7))',
+                                border: '1px solid var(--rule)',
+                                background: 'var(--paper-2)',
                             }}
                         >
                             <Group justify="space-between" wrap="nowrap">
@@ -106,20 +105,16 @@ export function ApplicationBoard({ rows, onEdit, onStatusChange }: Props) {
                                         onClick={() => onEdit(r)}
                                         style={{
                                             padding: 10,
-                                            borderRadius: 8,
-                                            backgroundColor:
-                                                'light-dark(white, var(--mantine-color-dark-6))',
-                                            border:
-                                                '1px solid light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5))',
+                                            background: 'var(--card)',
+                                            border: '1px solid var(--rule)',
                                             cursor: 'pointer',
-                                            transition: 'transform 120ms, border-color 120ms',
+                                            transition: 'border-color 120ms',
                                         }}
                                         onMouseEnter={(e) => {
-                                            e.currentTarget.style.borderColor = `var(--mantine-color-${color}-4)`;
+                                            e.currentTarget.style.borderColor = 'var(--rule-strong)';
                                         }}
                                         onMouseLeave={(e) => {
-                                            e.currentTarget.style.borderColor =
-                                                'light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5))';
+                                            e.currentTarget.style.borderColor = 'var(--rule)';
                                         }}
                                     >
                                         <Text size="sm" fw={600} lineClamp={1}>

@@ -1,4 +1,3 @@
-import { Badge, Box, Group, Progress, Text, Tooltip } from '@mantine/core';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -16,6 +15,10 @@ interface Props {
     visibleApplications: number;
 }
 
+/**
+ * Text-editor style status bar. 24-28px, JetBrains Mono, hairline top,
+ * paper-2 background. Left: scope + data-dir. Right: agent/ollama state.
+ */
 export function StatusFooter({ totalApplications, visibleApplications }: Props) {
     const { t } = useTranslation();
     const [progress, setProgress] = useState<RunProgress | null>(null);
@@ -83,82 +86,101 @@ export function StatusFooter({ totalApplications, visibleApplications }: Props) 
             ? t('footer.applications', { count: totalApplications })
             : t('footer.showing', { visible: visibleApplications, total: totalApplications });
 
-    const ollamaTooltip =
-        ollamaRunning === null
-            ? t('footer.ollamaChecking')
-            : ollamaRunning
-              ? t('footer.ollamaRunning')
-              : t('footer.ollamaOffline');
-
     return (
-        <Box
-            px="md"
-            h="100%"
+        <div
+            className="mono"
             style={{
-                borderTop:
-                    '1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))',
-                backgroundColor:
-                    'light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-7))',
+                height: '100%',
+                padding: '0 14px',
                 display: 'flex',
                 alignItems: 'center',
+                gap: 14,
+                fontSize: 10.5,
+                color: 'var(--ink-3)',
+                letterSpacing: '0.02em',
             }}
         >
-            <Group justify="space-between" gap="md" w="100%" wrap="nowrap">
-                <Text size="sm" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
-                    {visibleText}
-                </Text>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span
+                    style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: '50%',
+                        background: progress ? 'var(--accent)' : 'var(--moss)',
+                    }}
+                />
+                <span>{progress ? t('footer.working') : 'local · idle'}</span>
+            </span>
 
-                <Group gap="sm" style={{ flex: 1, maxWidth: 600 }} wrap="nowrap">
-                    {progress ? (
+            <span style={{ color: 'var(--ink-4)' }}>·</span>
+
+            <span>{visibleText}</span>
+
+            {progress && (
+                <>
+                    <span style={{ color: 'var(--ink-4)' }}>·</span>
+                    <span style={{ color: 'var(--ink-2)', fontWeight: 600 }}>
+                        {progress.searchLabel}
+                    </span>
+                    {progress.source && (
                         <>
-                            <Badge color="blue" variant="light" size="sm">
-                                {progress.searchLabel}
-                            </Badge>
-                            <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
-                                {progress.source
-                                    ? `${progress.source} · ${progress.phase}`
-                                    : progress.phase}
-                            </Text>
-                            {progress.total > 0 && (
-                                <>
-                                    <Progress
-                                        value={(progress.current / progress.total) * 100}
-                                        size="sm"
-                                        animated
-                                        style={{ flex: 1, minWidth: 80 }}
-                                    />
-                                    <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
-                                        {progress.current}/{progress.total}
-                                    </Text>
-                                </>
-                            )}
+                            <span style={{ color: 'var(--ink-4)' }}>·</span>
+                            <span>{progress.source}</span>
                         </>
-                    ) : null}
-                </Group>
+                    )}
+                    {progress.total > 0 && (
+                        <>
+                            <span style={{ color: 'var(--ink-4)' }}>·</span>
+                            <span className="tnum">
+                                {progress.current}/{progress.total} · {progress.phase}
+                            </span>
+                        </>
+                    )}
+                </>
+            )}
 
-                <Group gap="xs" wrap="nowrap">
-                    <Tooltip label={ollamaTooltip}>
-                        <Badge
-                            size="sm"
-                            color={
-                                ollamaRunning === null ? 'gray' : ollamaRunning ? 'green' : 'red'
-                            }
-                            variant="dot"
-                            style={{ textTransform: 'none' }}
-                        >
-                            {t('footer.ollama')}
-                        </Badge>
-                    </Tooltip>
-                    <Badge
-                        size="sm"
-                        color={progress ? 'blue' : 'gray'}
-                        variant="dot"
-                        style={{ textTransform: 'none' }}
-                    >
-                        {progress ? t('footer.working') : t('footer.idle')}
-                    </Badge>
-                </Group>
-            </Group>
-        </Box>
+            <div style={{ flex: 1 }} />
+
+            <span
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    color:
+                        ollamaRunning === null
+                            ? 'var(--ink-4)'
+                            : ollamaRunning
+                              ? 'var(--ink-2)'
+                              : 'var(--rust)',
+                }}
+                title={
+                    ollamaRunning === null
+                        ? t('footer.ollamaChecking')
+                        : ollamaRunning
+                          ? t('footer.ollamaRunning')
+                          : t('footer.ollamaOffline')
+                }
+            >
+                <span
+                    style={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: '50%',
+                        background:
+                            ollamaRunning === null
+                                ? 'var(--ink-4)'
+                                : ollamaRunning
+                                  ? 'var(--moss)'
+                                  : 'var(--rust)',
+                    }}
+                />
+                <span style={{ letterSpacing: '0.06em', fontWeight: 600 }}>
+                    OLLAMA · {ollamaRunning === null ? '...' : ollamaRunning ? 'READY' : 'OFFLINE'}
+                </span>
+            </span>
+
+            <span style={{ color: 'var(--ink-4)' }}>·</span>
+            <span>autosaved · just now</span>
+        </div>
     );
 }

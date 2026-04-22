@@ -46,6 +46,14 @@ export interface ApplicationRecord {
     updatedAt: string;
 }
 
+export interface ApplicationEvent {
+    id: string;
+    applicationId: string;
+    fromStatus: ApplicationStatus | null;
+    toStatus: ApplicationStatus;
+    changedAt: string;
+}
+
 export interface AgentProfile {
     stackKeywords: string;
     remotePreferred: boolean;
@@ -77,6 +85,11 @@ const api = {
         update: (id: string, input: ApplicationInput): Promise<ApplicationRecord> =>
             ipcRenderer.invoke('applications:update', id, input),
         delete: (id: string): Promise<{ ok: true }> => ipcRenderer.invoke('applications:delete', id),
+        events: {
+            list: (): Promise<ApplicationEvent[]> => ipcRenderer.invoke('applications:events:list'),
+            forApp: (id: string): Promise<ApplicationEvent[]> =>
+                ipcRenderer.invoke('applications:events:forApp', id),
+        },
     },
     llm: {
         extract: (url: string): Promise<ExtractedJobData> => ipcRenderer.invoke('llm:extract', url),

@@ -1,7 +1,6 @@
 import {
     Accordion,
     Alert,
-    Badge,
     Button,
     Divider,
     Drawer,
@@ -17,6 +16,11 @@ import {
     TextInput,
     Tooltip,
 } from '@mantine/core';
+import { GhostBtn } from './primitives/GhostBtn';
+import { Kbd } from './primitives/Kbd';
+import { Label } from './primitives/Label';
+import { StageGlyph } from './primitives/StageGlyph';
+import { MatchScore } from './primitives/MatchScore';
 import { DateInput } from '@mantine/dates';
 import '@mantine/dates/styles.css';
 import { useForm } from '@mantine/form';
@@ -246,21 +250,122 @@ export function ApplicationFormModal({
         <Drawer
             opened={opened}
             onClose={onClose}
-            title={
-                <Group gap="xs">
-                    <Text fw={600}>{initial ? t('form.editTitle') : t('form.newTitle')}</Text>
-                    {form.values.matchScore > 0 && (
-                        <Badge color={scoreColor(form.values.matchScore)} variant="light">
-                            {form.values.matchScore}/100
-                        </Badge>
-                    )}
-                </Group>
-            }
+            withCloseButton={false}
             position="right"
             size="xl"
+            padding={0}
             scrollAreaComponent={ScrollArea.Autosize}
             overlayProps={{ backgroundOpacity: 0.3, blur: 2 }}
+            styles={{
+                content: { display: 'flex', flexDirection: 'column' },
+                body: {
+                    padding: 0,
+                    flex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minHeight: 0,
+                },
+            }}
         >
+            {/* custom header — design detail-pane style */}
+            <div
+                style={{
+                    padding: '18px 22px 14px',
+                    borderBottom: '1px solid var(--rule)',
+                    background: 'var(--paper)',
+                    flexShrink: 0,
+                }}
+            >
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        marginBottom: 10,
+                    }}
+                >
+                    {initial && (
+                        <>
+                            <span
+                                className="mono"
+                                style={{
+                                    fontSize: 10.5,
+                                    color: 'var(--ink-3)',
+                                    letterSpacing: '0.08em',
+                                }}
+                            >
+                                {initial.id.slice(0, 8).toUpperCase()}
+                            </span>
+                            <div
+                                style={{
+                                    width: 1,
+                                    height: 10,
+                                    background: 'var(--rule-strong)',
+                                }}
+                            />
+                            <span
+                                className="mono"
+                                style={{
+                                    fontSize: 10,
+                                    color: 'var(--ink-4)',
+                                    letterSpacing: '0.1em',
+                                    textTransform: 'uppercase',
+                                }}
+                            >
+                                {initial.source || 'direct'}
+                            </span>
+                        </>
+                    )}
+                    {!initial && <Label>New application</Label>}
+                    <div style={{ flex: 1 }} />
+                    {form.values.matchScore > 0 && (
+                        <MatchScore value={form.values.matchScore} width={48} />
+                    )}
+                    <GhostBtn onClick={onClose}>
+                        <span>Close</span>
+                        <Kbd>esc</Kbd>
+                    </GhostBtn>
+                </div>
+
+                <div
+                    className="serif"
+                    style={{
+                        fontSize: 26,
+                        fontWeight: 500,
+                        color: 'var(--ink)',
+                        letterSpacing: '-0.015em',
+                        lineHeight: 1.15,
+                    }}
+                >
+                    {form.values.jobTitle || t('form.newTitle')}
+                </div>
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        marginTop: 6,
+                    }}
+                >
+                    <StageGlyph status={form.values.status} size={11} />
+                    <span
+                        style={{ fontSize: 14, color: 'var(--ink-2)', fontWeight: 500 }}
+                    >
+                        {form.values.companyName || t('form.company')}
+                    </span>
+                    {form.values.location && (
+                        <>
+                            <span style={{ color: 'var(--ink-4)' }}>·</span>
+                            <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>
+                                {form.values.location}
+                            </span>
+                        </>
+                    )}
+                </div>
+            </div>
+
+            {/* body content (scrollable) */}
+            <div style={{ flex: 1, overflow: 'auto', padding: '18px 22px' }}>
             <form onSubmit={form.onSubmit(submit)}>
                 <Stack gap="md">
                     <Alert variant="light" color="accent" icon={<IconSparkles size={16} />}>
@@ -524,52 +629,66 @@ export function ApplicationFormModal({
                         </Accordion.Item>
                     </Accordion>
 
-                    <Divider />
-
-                    <Group justify="space-between" pb="md">
-                        <div>
-                            {initial && onDelete && (
-                                <Button
-                                    variant="subtle"
-                                    color="red"
-                                    leftSection={<IconTrash size={16} />}
-                                    onClick={() => {
-                                        if (
-                                            confirm(
-                                                t('confirm.deleteApplication', {
-                                                    name: initial.companyName,
-                                                }),
-                                            )
-                                        ) {
-                                            onDelete(initial.id);
-                                            onClose();
-                                        }
-                                    }}
-                                >
-                                    {t('common.delete')}
-                                </Button>
-                            )}
-                        </div>
-                        <Group>
-                            {initial && (
-                                <Button
-                                    variant="light"
-                                    leftSection={<IconSend size={16} />}
-                                    onClick={() => setEmailOpened(true)}
-                                >
-                                    {t('email.send')}
-                                </Button>
-                            )}
-                            <Button variant="subtle" onClick={onClose}>
-                                {t('common.cancel')}
-                            </Button>
-                            <Button type="submit">
-                                {initial ? t('common.save') : t('common.create')}
-                            </Button>
-                        </Group>
-                    </Group>
                 </Stack>
             </form>
+            </div>
+            {/* /body */}
+
+            {/* sticky paper footer with action buttons */}
+            <div
+                style={{
+                    display: 'flex',
+                    gap: 6,
+                    padding: 12,
+                    borderTop: '1px solid var(--rule)',
+                    background: 'var(--paper-2)',
+                    flexShrink: 0,
+                    alignItems: 'center',
+                }}
+            >
+                {initial && onDelete && (
+                    <GhostBtn
+                        onClick={() => {
+                            if (
+                                confirm(
+                                    t('confirm.deleteApplication', {
+                                        name: initial.companyName,
+                                    }),
+                                )
+                            ) {
+                                onDelete(initial.id);
+                                onClose();
+                            }
+                        }}
+                        style={{ color: 'var(--rust)' }}
+                    >
+                        <IconTrash size={12} />
+                        <span>{t('common.delete')}</span>
+                    </GhostBtn>
+                )}
+                <div style={{ flex: 1 }} />
+                {initial && (
+                    <GhostBtn onClick={() => setEmailOpened(true)}>
+                        <IconSend size={12} />
+                        <span>{t('email.send')}</span>
+                    </GhostBtn>
+                )}
+                <GhostBtn onClick={onClose}>
+                    <span>{t('common.cancel')}</span>
+                </GhostBtn>
+                <GhostBtn
+                    active
+                    onClick={() => form.onSubmit(submit)()}
+                    style={{
+                        background: 'var(--ink)',
+                        color: 'var(--paper)',
+                        borderColor: 'var(--ink)',
+                    }}
+                >
+                    <span>{initial ? t('common.save') : t('common.create')}</span>
+                    <Kbd tone="dark">⌘⏎</Kbd>
+                </GhostBtn>
+            </div>
             {initial && (
                 <EmailSendDialog
                     opened={emailOpened}

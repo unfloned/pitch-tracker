@@ -1,0 +1,453 @@
+/* Pitch Tracker — Paper & Ink globals */
+
+/* Fonts */
+@import '@fontsource/fraunces/400.css';
+@import '@fontsource/fraunces/500.css';
+@import '@fontsource/fraunces/600.css';
+@import '@fontsource/space-grotesk/400.css';
+@import '@fontsource/space-grotesk/500.css';
+@import '@fontsource/space-grotesk/600.css';
+@import '@fontsource/space-grotesk/700.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+@import '@fontsource/jetbrains-mono/600.css';
+
+:root {
+    /* Paper palette (light default) */
+    --paper: #f4efe6;
+    --paper-2: #ebe5d9;
+    --paper-3: #e0d9c9;
+    --card: #fbf8f1;
+    --ink: #1c1a16;
+    --ink-2: #37332c;
+    --ink-3: #6c665b;
+    --ink-4: #9a9387;
+    --rule: #d7cfbe;
+    --rule-strong: #b9b0a0;
+    --row-hover: #f3ede0;
+    --window-bg: #2a2723;
+
+    /* Signal palette */
+    --accent: oklch(0.74 0.15 70);
+    --accent-ink: oklch(0.38 0.1 60);
+    --rust: oklch(0.52 0.13 35);
+    --moss: oklch(0.55 0.08 145);
+    --sky: oklch(0.6 0.08 230);
+
+    /* Typography */
+    --f-display: 'Fraunces', Georgia, serif;
+    --f-ui: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+    --f-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+    --f-display-track: -0.022em;
+    --f-display-wgt: 500;
+}
+
+/* Night theme (dark mode) */
+[data-mantine-color-scheme='dark'] {
+    --paper: #1b1a17;
+    --paper-2: #232119;
+    --paper-3: #2c2920;
+    --card: #24221c;
+    --ink: #ece6d8;
+    --ink-2: #cbc5b6;
+    --ink-3: #8c8777;
+    --ink-4: #635f55;
+    --rule: #393528;
+    --rule-strong: #4e4838;
+    --row-hover: #2c2920;
+    --window-bg: #0f0e0b;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--f-ui);
+    background: var(--paper);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    font-size: 13.5px;
+    line-height: 1.45;
+}
+
+/* Utility classes */
+.serif {
+    font-family: var(--f-display);
+    letter-spacing: var(--f-display-track);
+    font-weight: var(--f-display-wgt);
+}
+
+.mono {
+    font-family: var(--f-mono);
+}
+
+.tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+}
+
+/* Scrollbar — thin, paper-toned */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--rule);
+    border-radius: 0;
+    border: 2px solid var(--paper);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--rule-strong);
+}
+
+/* Selection */
+::selection {
+    background: var(--accent);
+    color: var(--ink);
+}
+
+/* Blinking cursor for composer */
+@keyframes blink {
+    50% {
+        opacity: 0;
+    }
+}
+
+/* Mantine overrides — wrap, don't replace */
+.mantine-AppShell-main {
+    background: var(--paper) !important;
+    color: var(--ink);
+}
+
+.mantine-AppShell-navbar {
+    background: var(--paper) !important;
+    border-right: 1px solid var(--rule-strong) !important;
+    /* Belt + suspenders: Mantine defaults this to fixed, but force it so
+       nothing in our cascade can accidentally un-fix it. */
+    position: fixed !important;
+    inset-inline-start: 0 !important;
+    top: var(--app-shell-header-height, 36px) !important;
+    bottom: var(--app-shell-footer-height, 28px) !important;
+    z-index: 199 !important;
+}
+
+.mantine-AppShell-header {
+    background: var(--paper-2) !important;
+    border-bottom: 1px solid var(--rule-strong) !important;
+    position: fixed !important;
+    top: 0 !important;
+    inset-inline: 0 !important;
+    z-index: 200 !important;
+}
+
+.mantine-AppShell-footer {
+    background: var(--paper-2) !important;
+    border-top: 1px solid var(--rule-strong) !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    inset-inline: 0 !important;
+    z-index: 200 !important;
+}
+
+/* Don't-ship: remove default card shadows anywhere shadow="sm" etc used */
+.mantine-Paper-root,
+.mantine-Card-root {
+    box-shadow: none !important;
+}
+
+/* Modal / Drawer — paper surface */
+.mantine-Modal-content,
+.mantine-Drawer-content {
+    background: var(--paper) !important;
+    color: var(--ink);
+}
+
+.mantine-Modal-header,
+.mantine-Drawer-header {
+    background: var(--paper-2) !important;
+    border-bottom: 1px solid var(--rule) !important;
+}
+
+/* No pills. Badges corners 2px only. */
+.mantine-Badge-root {
+    border-radius: 2px !important;
+}
+
+/* Buttons: flatter corners, no shadow */
+.mantine-Button-root {
+    border-radius: 4px !important;
+    box-shadow: none !important;
+}
+
+/* Inputs: hairline paper look */
+.mantine-Input-input,
+.mantine-TextInput-input,
+.mantine-Select-input,
+.mantine-Textarea-input {
+    background: var(--card) !important;
+    border: 1px solid var(--rule-strong) !important;
+    color: var(--ink) !important;
+    border-radius: 4px !important;
+}
+
+.mantine-Input-input:focus,
+.mantine-TextInput-input:focus,
+.mantine-Select-input:focus,
+.mantine-Textarea-input:focus {
+    border-color: var(--ink-2) !important;
+}
+
+/* Notifications — status-bar toast feel */
+.mantine-Notification-root {
+    border-radius: 4px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18) !important;
+    border: 1px solid var(--rule-strong) !important;
+    background: var(--paper) !important;
+    color: var(--ink) !important;
+}
+
+/* Menu (dropdowns) */
+.mantine-Menu-dropdown {
+    background: var(--paper) !important;
+    border: 1px solid var(--rule-strong) !important;
+    border-radius: 4px !important;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12) !important;
+}
+
+.mantine-Menu-item {
+    border-radius: 3px !important;
+}
+
+/* Tooltip */
+.mantine-Tooltip-tooltip {
+    background: var(--ink) !important;
+    color: var(--paper) !important;
+    font-family: var(--f-mono);
+    font-size: 10.5px !important;
+    letter-spacing: 0.02em;
+    border-radius: 3px !important;
+}
+
+/* Tabs — GhostBtn-style */
+.mantine-Tabs-tab {
+    border-radius: 0 !important;
+    border: 1px solid transparent !important;
+    color: var(--ink-2) !important;
+}
+
+.mantine-Tabs-tab[data-active] {
+    background: var(--paper-2) !important;
+    border-color: var(--rule-strong) !important;
+    color: var(--ink) !important;
+    font-weight: 600 !important;
+}
+
+/* Progress — flat ink */
+.mantine-Progress-bar {
+    background: var(--ink-2) !important;
+}
+
+.mantine-Progress-root {
+    background: var(--paper-3) !important;
+}
+
+/* Spotlight (⌘K palette) — paper overlay */
+.mantine-Spotlight-root {
+    background: var(--paper) !important;
+    border: 1px solid var(--ink) !important;
+    border-radius: 2px !important;
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.3) !important;
+}
+
+.mantine-Spotlight-search {
+    background: var(--paper) !important;
+    border-bottom: 1px solid var(--rule-strong) !important;
+    color: var(--ink) !important;
+    font-family: var(--f-ui) !important;
+    font-size: 15px !important;
+}
+
+.mantine-Spotlight-action {
+    border-radius: 0 !important;
+    border-left: 2px solid transparent;
+    padding: 8px 14px !important;
+}
+
+.mantine-Spotlight-action[data-selected],
+.mantine-Spotlight-action:hover {
+    background: var(--paper-2) !important;
+    border-left-color: var(--accent) !important;
+}
+
+.mantine-Spotlight-actionLabel {
+    color: var(--ink) !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+}
+
+.mantine-Spotlight-actionDescription {
+    color: var(--ink-3) !important;
+    font-size: 11px !important;
+    font-family: var(--f-mono) !important;
+    letter-spacing: 0.02em;
+}
+
+/* ScrollArea — remove default borders */
+.mantine-ScrollArea-root {
+    background: transparent;
+}
+
+/* Accordion — flat paper cards, not white boxes. Used heavily in the
+   ApplicationForm drawer where the old look clashed with the paper tone. */
+.mantine-Accordion-root {
+    background: transparent;
+}
+
+.mantine-Accordion-item {
+    background: var(--card) !important;
+    border: 1px solid var(--rule) !important;
+    border-radius: 4px !important;
+    margin-bottom: 8px;
+    overflow: hidden;
+}
+
+.mantine-Accordion-control {
+    color: var(--ink) !important;
+    font-family: var(--f-ui);
+    font-weight: 500;
+    background: transparent !important;
+}
+
+.mantine-Accordion-control:hover {
+    background: var(--paper-2) !important;
+}
+
+.mantine-Accordion-label {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+}
+
+.mantine-Accordion-panel {
+    background: var(--card) !important;
+    color: var(--ink);
+    border-top: 1px solid var(--rule);
+}
+
+.mantine-Accordion-content {
+    padding-top: 14px !important;
+    padding-bottom: 14px !important;
+}
+
+.mantine-Accordion-chevron {
+    color: var(--ink-3) !important;
+}
+
+/* Alert — paper-toned, not neon */
+.mantine-Alert-root {
+    background: var(--card) !important;
+    border: 1px solid var(--rule) !important;
+    border-left: 3px solid var(--accent) !important;
+    color: var(--ink-2) !important;
+    border-radius: 3px !important;
+}
+
+.mantine-Alert-title,
+.mantine-Alert-message {
+    color: var(--ink-2) !important;
+}
+
+.mantine-Alert-icon {
+    color: var(--accent-ink) !important;
+}
+
+/* Divider */
+.mantine-Divider-root {
+    border-color: var(--rule) !important;
+}
+
+/* Switch — paper tones */
+.mantine-Switch-track {
+    background: var(--paper-3) !important;
+    border-color: var(--rule-strong) !important;
+}
+
+.mantine-Switch-track[data-checked] {
+    background: var(--ink-2) !important;
+    border-color: var(--ink-2) !important;
+}
+
+.mantine-Switch-thumb {
+    background: var(--paper) !important;
+    border-color: var(--rule-strong) !important;
+}
+
+/* Checkbox — keeps Mantine size but paper border */
+.mantine-Checkbox-input {
+    background: var(--card) !important;
+    border-color: var(--rule-strong) !important;
+    border-radius: 2px !important;
+}
+
+.mantine-Checkbox-input:checked {
+    background: var(--ink-2) !important;
+    border-color: var(--ink-2) !important;
+}
+
+/* SegmentedControl — dark pill look becomes paper row */
+.mantine-SegmentedControl-root {
+    background: var(--card) !important;
+    border: 1px solid var(--rule-strong) !important;
+    border-radius: 4px !important;
+    box-shadow: none !important;
+}
+
+.mantine-SegmentedControl-indicator {
+    background: var(--paper-2) !important;
+    border: 1px solid var(--rule-strong) !important;
+    box-shadow: none !important;
+}
+
+.mantine-SegmentedControl-label {
+    color: var(--ink-2) !important;
+}
+
+.mantine-SegmentedControl-control[data-active] .mantine-SegmentedControl-label {
+    color: var(--ink) !important;
+    font-weight: 600;
+}
+
+/* Loader — ink tone */
+.mantine-Loader-root {
+    color: var(--ink-2);
+}
+
+/* Pill / Tag in inputs */
+.mantine-Pill-root,
+.mantine-TagsInput-pill {
+    background: var(--paper-2) !important;
+    border: 1px solid var(--rule) !important;
+    color: var(--ink-2) !important;
+    border-radius: 2px !important;
+}
+
+/* Cards without shadow — rely on rules, not elevation */
+.mantine-Card-root,
+.mantine-Paper-root {
+    background: var(--card) !important;
+    border-color: var(--rule) !important;
+    color: var(--ink);
+}

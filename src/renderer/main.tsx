@@ -1,5 +1,6 @@
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
+import './theme/globals.css';
 import './i18n';
 
 import React from 'react';
@@ -60,7 +61,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <RootErrorBoundary>
             <MantineProvider
                 theme={theme}
-                defaultColorScheme="dark"
+                defaultColorScheme="light"
                 colorSchemeManager={colorSchemeManager}
             >
                 <Notifications position="bottom-right" />

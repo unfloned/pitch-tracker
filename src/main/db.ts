@@ -5,6 +5,17 @@ import Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
 import type { ApplicationInput, ApplicationStatus, Priority, RemoteType } from '@shared/application';
 
+/** A single status change on an application. Written on create and on
+ *  status update. Backfilled once per existing row so analytics can compute
+ *  stage transitions over time even for data that predates this feature. */
+export interface ApplicationEventRow {
+    id: string;
+    applicationId: string;
+    fromStatus: ApplicationStatus | null;
+    toStatus: ApplicationStatus;
+    changedAt: Date;
+}
+
 export interface ApplicationRow {
     id: string;
     companyName: string;
@@ -202,6 +213,44 @@ export function initDatabase(): void {
     for (const [col, sql] of migrations) {
         if (!existing.has(col)) db.exec(sql);
     }
+
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS application_events (
+            id TEXT PRIMARY KEY,
+            applicationId TEXT NOT NULL,
+            fromStatus TEXT,
+            toStatus TEXT NOT NULL,
+            changedAt TEXT NOT NULL,
+            FOREIGN KEY (applicationId) REFERENCES applications(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS application_events_app_idx
+            ON application_events(applicationId, changedAt);
+        CREATE INDEX IF NOT EXISTS application_events_time_idx
+            ON application_events(changedAt);
+    `);
+
+    // Backfill: every existing application gets one seed event at createdAt
+    // so the analytics history has a starting point. Only runs once — if any
+    // event row already exists for the row, we skip it.
+    const missing = db
+        .prepare(
+            `SELECT a.id, a.status, a.createdAt
+             FROM applications a
+             LEFT JOIN application_events e ON e.applicationId = a.id
+             WHERE e.id IS NULL
+             GROUP BY a.id`,
+        )
+        .all() as { id: string; status: ApplicationStatus; createdAt: string }[];
+    if (missing.length > 0) {
+        const insert = db.prepare(
+            'INSERT INTO application_events (id, applicationId, fromStatus, toStatus, changedAt) VALUES (?, ?, NULL, ?, ?)',
+        );
+        const tx = db.transaction((rows: typeof missing) => {
+            for (const r of rows) insert.run(randomUUID(), r.id, r.status, r.createdAt);
+        });
+        tx(missing);
+        console.log(`[events] Backfilled ${missing.length} application events`);
+    }
 }
 
 function getDb(): Database.Database {
@@ -266,6 +315,19 @@ export function getApplication(id: string): ApplicationRow | null {
     return row ? fromRaw(row) : null;
 }
 
+function recordEvent(
+    applicationId: string,
+    fromStatus: ApplicationStatus | null,
+    toStatus: ApplicationStatus,
+    changedAt: string,
+): void {
+    getDb()
+        .prepare(
+            'INSERT INTO application_events (id, applicationId, fromStatus, toStatus, changedAt) VALUES (?, ?, ?, ?, ?)',
+        )
+        .run(randomUUID(), applicationId, fromStatus, toStatus, changedAt);
+}
+
 export function createApplication(input: ApplicationInput): ApplicationRow {
     const id = randomUUID();
     const nowIso = now();
@@ -304,6 +366,8 @@ export function createApplication(input: ApplicationInput): ApplicationRow {
     getDb()
         .prepare(`INSERT INTO applications (${columns.join(', ')}) VALUES (${placeholders})`)
         .run(values);
+    // Seed event so the application shows up in history from its creation.
+    recordEvent(id, null, values.status as ApplicationStatus, nowIso);
     return getApplication(id)!;
 }
 
@@ -311,7 +375,8 @@ export function updateApplication(id: string, input: ApplicationInput): Applicat
     const existing = getApplication(id);
     if (!existing) throw new Error(`Application ${id} not found`);
 
-    const updates: Record<string, unknown> = { updatedAt: now() };
+    const nowIso = now();
+    const updates: Record<string, unknown> = { updatedAt: nowIso };
     for (const field of FIELDS) {
         if (input[field] !== undefined) {
             if (field === 'requiredProfile' || field === 'benefits' || field === 'interviews') {
@@ -332,9 +397,58 @@ export function updateApplication(id: string, input: ApplicationInput): Applicat
         .prepare(`UPDATE applications SET ${setClause} WHERE id = @id`)
         .run({ ...updates, id });
 
+    // Log the status transition only when status actually changed. Keeps the
+    // event log honest (a field-only edit does not count as a stage change).
+    if (input.status !== undefined && input.status !== existing.status) {
+        recordEvent(id, existing.status, input.status, nowIso);
+    }
+
     return getApplication(id)!;
 }
 
 export function deleteApplication(id: string): void {
+    // Events cascade via ON DELETE CASCADE in the schema.
     getDb().prepare('DELETE FROM applications WHERE id = ?').run(id);
+}
+
+export function listApplicationEvents(): ApplicationEventRow[] {
+    const rows = getDb()
+        .prepare(
+            'SELECT id, applicationId, fromStatus, toStatus, changedAt FROM application_events ORDER BY changedAt ASC',
+        )
+        .all() as {
+            id: string;
+            applicationId: string;
+            fromStatus: ApplicationStatus | null;
+            toStatus: ApplicationStatus;
+            changedAt: string;
+        }[];
+    return rows.map((r) => ({
+        id: r.id,
+        applicationId: r.applicationId,
+        fromStatus: r.fromStatus,
+        toStatus: r.toStatus,
+        changedAt: new Date(r.changedAt),
+    }));
+}
+
+export function listEventsForApplication(applicationId: string): ApplicationEventRow[] {
+    const rows = getDb()
+        .prepare(
+            'SELECT id, applicationId, fromStatus, toStatus, changedAt FROM application_events WHERE applicationId = ? ORDER BY changedAt ASC',
+        )
+        .all(applicationId) as {
+            id: string;
+            applicationId: string;
+            fromStatus: ApplicationStatus | null;
+            toStatus: ApplicationStatus;
+            changedAt: string;
+        }[];
+    return rows.map((r) => ({
+        id: r.id,
+        applicationId: r.applicationId,
+        fromStatus: r.fromStatus,
+        toStatus: r.toStatus,
+        changedAt: new Date(r.changedAt),
+    }));
 }
