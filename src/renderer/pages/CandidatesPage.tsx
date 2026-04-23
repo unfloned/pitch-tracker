@@ -1,4 +1,5 @@
-import { Center, Loader, Stack } from '@mantine/core';
+import { Center, Loader, Stack, Text } from '@mantine/core';
+import { modals } from '@mantine/modals';
 import { notifications } from '@mantine/notifications';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,16 +18,33 @@ interface Props {
     onGoToAgents: () => void;
 }
 
-/**
- * Agent-sourced job leads. Top: filters + bulk actions, body: list of rows,
- * detail on row click opens the CandidateDrawer. State in useCandidates hook.
- */
 export function CandidatesPage({ onCandidateImported, onGoToAgents }: Props) {
     const { t } = useTranslation();
     const ctrl = useCandidates();
     const [drawerCandidate, setDrawerCandidate] = useState<SerializedJobCandidate | null>(null);
 
-    if (ctrl.loading) {
+    const handleCleanupLowScore = () => {
+        modals.openConfirmModal({
+            title: t('candidates.confirmCleanupLowScoreTitle', {
+                count: ctrl.counts.lowScore,
+            }),
+            children: (
+                <Text size="sm" c="dimmed">
+                    {t('candidates.confirmDeleteBody')}
+                </Text>
+            ),
+            labels: {
+                confirm: t('candidates.confirmDeleteAction'),
+                cancel: t('common.cancel'),
+            },
+            confirmProps: { color: 'red' },
+            onConfirm: () => {
+                ctrl.deleteBelowScore(50);
+            },
+        });
+    };
+
+    if (ctrl.loading && ctrl.candidates.length === 0 && ctrl.counts.total === 0) {
         return (
             <Center mih={400}>
                 <Loader />
@@ -34,18 +52,19 @@ export function CandidatesPage({ onCandidateImported, onGoToAgents }: Props) {
         );
     }
 
-    if (ctrl.candidates.length === 0) {
+    if (ctrl.counts.total === 0) {
         return <InitialEmpty onGoToAgents={onGoToAgents} />;
     }
 
     return (
         <Stack gap="md">
             <PageHeader
+                bucket={ctrl.bucket}
+                onBucketChange={ctrl.setBucket}
                 filteredCount={ctrl.filtered.length}
-                totalCount={
-                    ctrl.candidates.filter((c) => c.status !== 'ignored').length
-                }
+                counts={ctrl.counts}
                 onGoToAgents={onGoToAgents}
+                onCleanupLowScore={handleCleanupLowScore}
             />
 
             <FilterBar
@@ -63,8 +82,12 @@ export function CandidatesPage({ onCandidateImported, onGoToAgents }: Props) {
 
             <BulkActions
                 count={ctrl.selectedIds.size}
+                bucket={ctrl.bucket}
                 onFavorite={ctrl.bulkFavorite}
                 onIgnore={ctrl.bulkIgnore}
+                onRestore={ctrl.bulkRestore}
+                onDelete={ctrl.bulkDelete}
+                onRescore={ctrl.bulkRescore}
             />
 
             {ctrl.filtered.length === 0 ? (
@@ -112,6 +135,10 @@ export function CandidatesPage({ onCandidateImported, onGoToAgents }: Props) {
                     await window.api.agents.updateCandidate(cand.id, {
                         favorite: !cand.favorite,
                     });
+                    await ctrl.refresh();
+                }}
+                onRescore={async (cand) => {
+                    await ctrl.rescoreSingle(cand.id);
                     await ctrl.refresh();
                 }}
             />

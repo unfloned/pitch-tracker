@@ -15,6 +15,11 @@ import {
     priorityColor,
     shortSource,
 } from '../lib/format';
+import {
+    APP_COLUMN_DEFS,
+    buildAppRowGrid,
+    type AppColumnId,
+} from './applications/prefs';
 import { StatusSelector } from './StatusSelector';
 import { MatchScore } from './primitives/MatchScore';
 import { useContextMenu } from './primitives/ContextMenu';
@@ -26,19 +31,36 @@ function formatLocation(row: ApplicationRecord, t: (k: string) => string): strin
     return loc || rem || '—';
 }
 
-/** Grid columns matching the column header in ApplicationsPage. */
-export const ROW_GRID =
-    '4px 72px 140px minmax(240px, 1fr) 96px 120px 96px 78px 72px 60px';
+export const DEFAULT_VISIBLE_COLUMNS: AppColumnId[] = APP_COLUMN_DEFS.map((c) => c.id);
+
+/** Default full-column grid used by legacy call sites. */
+export const ROW_GRID = buildAppRowGrid(DEFAULT_VISIBLE_COLUMNS);
 
 interface Props {
     row: ApplicationRecord;
     selected?: boolean;
+    visibleColumns?: AppColumnId[];
     onEdit: (row: ApplicationRecord) => void;
     onDelete: (id: string) => void;
     onStatusChange: (id: string, status: ApplicationStatus) => void;
 }
 
-export function ApplicationRow({ row, selected, onEdit, onDelete, onStatusChange }: Props) {
+export function ApplicationRow({
+    row,
+    selected,
+    visibleColumns = DEFAULT_VISIBLE_COLUMNS,
+    onEdit,
+    onDelete,
+    onStatusChange,
+}: Props) {
+    const showId = visibleColumns.includes('id');
+    const showSalary = visibleColumns.includes('salary');
+    const showLocation = visibleColumns.includes('location');
+    const showMatch = visibleColumns.includes('match');
+    const showSource = visibleColumns.includes('source');
+    const showUpdated = visibleColumns.includes('updated');
+    const rowGrid = buildAppRowGrid(visibleColumns);
+
     const { t } = useTranslation();
     const idShort = row.id?.slice(0, 8).toUpperCase() || '—';
     const initials = initialsFor(row.companyName || row.jobTitle || 'X');
@@ -90,7 +112,7 @@ export function ApplicationRow({ row, selected, onEdit, onDelete, onStatusChange
             onMouseLeave={() => setHovered(false)}
             style={{
                 display: 'grid',
-                gridTemplateColumns: ROW_GRID,
+                gridTemplateColumns: rowGrid,
                 alignItems: 'center',
                 height: 40,
                 background: rowBg,
@@ -103,20 +125,22 @@ export function ApplicationRow({ row, selected, onEdit, onDelete, onStatusChange
             <div style={{ height: '100%', background: priorityColor(row.priority) }} />
 
             {/* 2: id */}
-            <div
-                className="mono"
-                style={{
-                    fontSize: 10.5,
-                    color: 'var(--ink-3)',
-                    paddingLeft: 10,
-                    letterSpacing: '0.04em',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                }}
-            >
-                {idShort}
-            </div>
+            {showId && (
+                <div
+                    className="mono"
+                    style={{
+                        fontSize: 10.5,
+                        color: 'var(--ink-3)',
+                        paddingLeft: 10,
+                        letterSpacing: '0.04em',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                    }}
+                >
+                    {idShort}
+                </div>
+            )}
 
             {/* 3: stage (StatusSelector renders its own StageGlyph) */}
             <div
@@ -193,65 +217,75 @@ export function ApplicationRow({ row, selected, onEdit, onDelete, onStatusChange
             </div>
 
             {/* 5: salary */}
-            <div
-                className="mono tnum"
-                style={{ fontSize: 11, color: 'var(--ink-2)', fontWeight: 500 }}
-            >
-                {formatSalary(row.salaryMin, row.salaryMax, row.salaryCurrency)}
-            </div>
+            {showSalary && (
+                <div
+                    className="mono tnum"
+                    style={{ fontSize: 11, color: 'var(--ink-2)', fontWeight: 500 }}
+                >
+                    {formatSalary(row.salaryMin, row.salaryMax, row.salaryCurrency)}
+                </div>
+            )}
 
             {/* 6: location */}
-            <div
-                style={{
-                    fontSize: 11,
-                    color: 'var(--ink-3)',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    paddingRight: 8,
-                }}
-            >
-                {formatLocation(row, t)}
-            </div>
+            {showLocation && (
+                <div
+                    style={{
+                        fontSize: 11,
+                        color: 'var(--ink-3)',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        paddingRight: 8,
+                    }}
+                >
+                    {formatLocation(row, t)}
+                </div>
+            )}
 
             {/* 7: match */}
-            <div>
-                {row.matchScore > 0 ? (
-                    <Tooltip label={row.matchReason || 'LLM score'} multiline w={280}>
-                        <span>
-                            <MatchScore value={row.matchScore} width={40} />
+            {showMatch && (
+                <div>
+                    {row.matchScore > 0 ? (
+                        <Tooltip label={row.matchReason || 'LLM score'} multiline w={280}>
+                            <span>
+                                <MatchScore value={row.matchScore} width={40} />
+                            </span>
+                        </Tooltip>
+                    ) : (
+                        <span className="mono" style={{ fontSize: 10, color: 'var(--ink-4)' }}>
+                            —
                         </span>
-                    </Tooltip>
-                ) : (
-                    <span className="mono" style={{ fontSize: 10, color: 'var(--ink-4)' }}>
-                        —
-                    </span>
-                )}
-            </div>
+                    )}
+                </div>
+            )}
 
             {/* 8: source */}
-            <div
-                className="mono"
-                style={{
-                    fontSize: 10,
-                    color: 'var(--ink-4)',
-                    letterSpacing: '0.04em',
-                    textTransform: 'uppercase',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                }}
-            >
-                {shortSource(row.source)}
-            </div>
+            {showSource && (
+                <div
+                    className="mono"
+                    style={{
+                        fontSize: 10,
+                        color: 'var(--ink-4)',
+                        letterSpacing: '0.04em',
+                        textTransform: 'uppercase',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                    }}
+                >
+                    {shortSource(row.source)}
+                </div>
+            )}
 
             {/* 9: updated */}
-            <div
-                className="mono"
-                style={{ fontSize: 10.5, color: 'var(--ink-3)', letterSpacing: '0.02em' }}
-            >
-                {formatUpdated(row.updatedAt)}
-            </div>
+            {showUpdated && (
+                <div
+                    className="mono"
+                    style={{ fontSize: 10.5, color: 'var(--ink-3)', letterSpacing: '0.02em' }}
+                >
+                    {formatUpdated(row.updatedAt)}
+                </div>
+            )}
 
             {/* 10: actions — sticky to right edge so they stay visible on
                  horizontal scroll. Background matches row so underlying cells

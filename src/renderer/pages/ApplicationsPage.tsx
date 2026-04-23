@@ -1,27 +1,36 @@
 import {
     Box,
     Center,
+    Checkbox,
     Loader,
+    Popover,
     Select,
     Stack,
     Text,
     TextInput,
 } from '@mantine/core';
-import { IconBriefcase, IconSearch } from '@tabler/icons-react';
+import { IconBriefcase, IconColumns3, IconSearch } from '@tabler/icons-react';
 import { RefObject, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import type { ApplicationRecord } from '../../preload/index';
 import type { ApplicationStatus } from '@shared/application';
 import { STATUS_ORDER } from '@shared/application';
-import { ApplicationRow, ROW_GRID } from '../components/ApplicationRow';
+import { ApplicationRow } from '../components/ApplicationRow';
 import { ApplicationBoard } from '../components/ApplicationBoard';
 import { ApplicationDetail } from '../components/ApplicationDetail';
 import { ApplicationFormModal } from '../components/ApplicationForm';
+import {
+    APP_COLUMN_DEFS,
+    buildAppRowGrid,
+    loadAppPrefs,
+    saveAppPrefs,
+    type AppBucket,
+    type AppColumnId,
+    type AppView,
+} from '../components/applications/prefs';
 import { GhostBtn } from '../components/primitives/GhostBtn';
 import { Label } from '../components/primitives/Label';
-
-type ViewMode = 'list' | 'board';
 
 type GroupKey = 'draft' | 'active' | 'waiting' | 'interviewing' | 'decision' | 'closed';
 
@@ -34,9 +43,7 @@ const GROUP_ORDER: GroupKey[] = [
     'closed',
 ];
 
-type StageBucket = 'active' | 'pipeline' | 'archive' | 'all';
-
-const STAGE_BUCKETS: Record<StageBucket, ApplicationStatus[] | null> = {
+const STAGE_BUCKETS: Record<AppBucket, ApplicationStatus[] | null> = {
     active:   ['applied', 'in_review', 'interview_scheduled', 'interviewed', 'offer_received'],
     pipeline: ['draft', 'applied', 'in_review'],
     archive:  ['accepted', 'rejected', 'withdrawn'],
@@ -75,11 +82,37 @@ export function ApplicationsPage({
     const { t } = useTranslation();
     const [searchParams, setSearchParams] = useSearchParams();
     const urlId = searchParams.get('id');
+    const initialPrefs = useMemo(() => loadAppPrefs(), []);
     const [query, setQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState<string | null>(null);
-    const [bucket, setBucket] = useState<StageBucket>('active');
-    const [view, setView] = useState<ViewMode>('list');
+    const [statusFilter, setStatusFilterState] = useState<string | null>(initialPrefs.statusFilter);
+    const [bucket, setBucketState] = useState<AppBucket>(initialPrefs.bucket);
+    const [view, setViewState] = useState<AppView>(initialPrefs.view);
+    const [visibleColumns, setVisibleColumnsState] = useState<AppColumnId[]>(
+        initialPrefs.visibleColumns,
+    );
+    const [columnPopoverOpen, setColumnPopoverOpen] = useState(false);
     const [selectedId, setSelectedId] = useState<string | null>(urlId);
+
+    const setStatusFilter = (v: string | null) => {
+        setStatusFilterState(v);
+        saveAppPrefs({ statusFilter: v });
+    };
+    const setBucket = (v: AppBucket) => {
+        setBucketState(v);
+        saveAppPrefs({ bucket: v });
+    };
+    const setView = (v: AppView) => {
+        setViewState(v);
+        saveAppPrefs({ view: v });
+    };
+    const toggleColumn = (id: AppColumnId) => {
+        setVisibleColumnsState((prev) => {
+            const next = prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id];
+            saveAppPrefs({ visibleColumns: next });
+            return next;
+        });
+    };
+    const rowGrid = buildAppRowGrid(visibleColumns);
 
     // Pick up ?id=... on mount or when external navigation updates it.
     useEffect(() => {
@@ -98,8 +131,8 @@ export function ApplicationsPage({
         setSearchParams({}, { replace: true });
     }, [setSearchParams]);
 
-    const bucketCounts = useMemo<Record<StageBucket, number>>(() => {
-        const c: Record<StageBucket, number> = { active: 0, pipeline: 0, archive: 0, all: rows.length };
+    const bucketCounts = useMemo<Record<AppBucket, number>>(() => {
+        const c: Record<AppBucket, number> = { active: 0, pipeline: 0, archive: 0, all: rows.length };
         for (const r of rows) {
             if (STAGE_BUCKETS.active!.includes(r.status)) c.active++;
             if (STAGE_BUCKETS.pipeline!.includes(r.status)) c.pipeline++;
@@ -209,7 +242,7 @@ export function ApplicationsPage({
                         overflow: 'hidden',
                     }}
                 >
-                    {(['active', 'pipeline', 'archive', 'all'] as StageBucket[]).map((k, i) => (
+                    {(['active', 'pipeline', 'archive', 'all'] as AppBucket[]).map((k, i) => (
                         <button
                             key={k}
                             type="button"
@@ -273,7 +306,7 @@ export function ApplicationsPage({
                         overflow: 'hidden',
                     }}
                 >
-                    {(['list', 'board'] as ViewMode[]).map((v, i) => (
+                    {(['list', 'board'] as AppView[]).map((v, i) => (
                         <button
                             key={v}
                             type="button"
@@ -295,6 +328,39 @@ export function ApplicationsPage({
                         </button>
                     ))}
                 </div>
+
+                <Popover
+                    opened={columnPopoverOpen}
+                    onChange={setColumnPopoverOpen}
+                    position="bottom-end"
+                    shadow="md"
+                    withArrow
+                >
+                    <Popover.Target>
+                        <span style={{ display: 'inline-flex' }}>
+                            <GhostBtn onClick={() => setColumnPopoverOpen((v) => !v)}>
+                                <IconColumns3 size={12} />
+                                <span>Spalten</span>
+                            </GhostBtn>
+                        </span>
+                    </Popover.Target>
+                    <Popover.Dropdown>
+                        <Stack gap={6} style={{ minWidth: 160 }}>
+                            <Text size="xs" c="dimmed" fw={600} style={{ letterSpacing: '0.05em' }}>
+                                SICHTBAR
+                            </Text>
+                            {APP_COLUMN_DEFS.map((def) => (
+                                <Checkbox
+                                    key={def.id}
+                                    label={def.label}
+                                    size="xs"
+                                    checked={visibleColumns.includes(def.id)}
+                                    onChange={() => toggleColumn(def.id)}
+                                />
+                            ))}
+                        </Stack>
+                    </Popover.Dropdown>
+                </Popover>
 
                 <GhostBtn active onClick={onNew}>
                     <span>＋ New</span>
@@ -348,7 +414,7 @@ export function ApplicationsPage({
                             <div
                                 style={{
                                     display: 'grid',
-                                    gridTemplateColumns: ROW_GRID,
+                                    gridTemplateColumns: rowGrid,
                                     height: 26,
                                     alignItems: 'center',
                                     background: 'var(--paper-2)',
@@ -359,22 +425,19 @@ export function ApplicationsPage({
                                 }}
                             >
                                 <div />
-                                {['ID', 'STAGE', 'ROLE', 'SALARY', 'LOCATION', 'MATCH', 'SRC', 'UPDATED'].map(
-                                    (h, i) => (
-                                        <div
-                                            key={h}
-                                            className="mono"
-                                            style={{
-                                                fontSize: 9.5,
-                                                fontWeight: 600,
-                                                color: 'var(--ink-3)',
-                                                letterSpacing: '0.1em',
-                                                paddingLeft: i === 0 ? 10 : 0,
-                                            }}
-                                        >
-                                            {h}
-                                        </div>
-                                    ),
+                                {visibleColumns.includes('id') && (
+                                    <HeaderCell label="ID" paddingLeft />
+                                )}
+                                <HeaderCell label="STAGE" />
+                                <HeaderCell label="ROLE" />
+                                {visibleColumns.includes('salary') && <HeaderCell label="SALARY" />}
+                                {visibleColumns.includes('location') && (
+                                    <HeaderCell label="LOCATION" />
+                                )}
+                                {visibleColumns.includes('match') && <HeaderCell label="MATCH" />}
+                                {visibleColumns.includes('source') && <HeaderCell label="SRC" />}
+                                {visibleColumns.includes('updated') && (
+                                    <HeaderCell label="UPDATED" />
                                 )}
                                 <div
                                     className="mono"
@@ -425,6 +488,7 @@ export function ApplicationsPage({
                                                 key={r.id}
                                                 row={r}
                                                 selected={selectedId === r.id}
+                                                visibleColumns={visibleColumns}
                                                 onEdit={handleSelect}
                                                 onDelete={onDelete}
                                                 onStatusChange={onStatusChange}
@@ -460,4 +524,21 @@ export function ApplicationsPage({
 
 function capitalize(s: string): string {
     return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function HeaderCell({ label, paddingLeft }: { label: string; paddingLeft?: boolean }) {
+    return (
+        <div
+            className="mono"
+            style={{
+                fontSize: 9.5,
+                fontWeight: 600,
+                color: 'var(--ink-3)',
+                letterSpacing: '0.1em',
+                paddingLeft: paddingLeft ? 10 : 0,
+            }}
+        >
+            {label}
+        </div>
+    );
 }

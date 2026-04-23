@@ -1,29 +1,77 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { notifications } from '@mantine/notifications';
 import { useTranslation } from 'react-i18next';
+import type { CandidateCountsDto } from '../../../preload/index';
 import type { SerializedJobCandidate } from '@shared/job-search';
+import { loadCandidatesPrefs, saveCandidatesPrefs } from './prefs';
 import type { SortBy, StatusFilter } from './types';
 
-/**
- * Loads candidates, listens to agent-run events to refresh, and exposes the
- * filtered/sorted list plus selection helpers. Keeps CandidatesPage lean.
- */
+export type CandidateBucket = 'active' | 'ignored';
+
+const EMPTY_COUNTS: CandidateCountsDto = {
+    active: 0,
+    ignored: 0,
+    imported: 0,
+    lowScore: 0,
+    total: 0,
+};
+
 export function useCandidates() {
     const { t } = useTranslation();
+    const prefs = loadCandidatesPrefs();
+
+    const [bucket, setBucketState] = useState<CandidateBucket>(prefs.bucket);
     const [candidates, setCandidates] = useState<SerializedJobCandidate[]>([]);
+    const [counts, setCounts] = useState<CandidateCountsDto>(EMPTY_COUNTS);
     const [loading, setLoading] = useState(true);
-    const [minScore, setMinScore] = useState(50);
+    const [minScore, setMinScoreState] = useState(prefs.minScore);
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-    const [sourceFilter, setSourceFilter] = useState<string[]>([]);
-    const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-    const [sortBy, setSortBy] = useState<SortBy>('score_desc');
+    const [sourceFilter, setSourceFilterState] = useState<string[]>(prefs.sourceFilter);
+    const [statusFilter, setStatusFilterState] = useState<StatusFilter>(prefs.statusFilter);
+    const [sortBy, setSortByState] = useState<SortBy>(prefs.sortBy);
     const [searchText, setSearchText] = useState('');
+
+    const setMinScore = (v: number) => {
+        setMinScoreState(v);
+        saveCandidatesPrefs({ minScore: v });
+    };
+    const setSourceFilter = (v: string[]) => {
+        setSourceFilterState(v);
+        saveCandidatesPrefs({ sourceFilter: v });
+    };
+    const setStatusFilter = (v: StatusFilter) => {
+        setStatusFilterState(v);
+        saveCandidatesPrefs({ statusFilter: v });
+    };
+    const setSortBy = (v: SortBy) => {
+        setSortByState(v);
+        saveCandidatesPrefs({ sortBy: v });
+    };
+    const setBucket = (v: CandidateBucket) => {
+        setBucketState(v);
+        setSelectedIds(new Set());
+        saveCandidatesPrefs({ bucket: v });
+    };
+
+    const refreshCounts = useCallback(async () => {
+        try {
+            const c = await window.api.agents.countCandidates();
+            setCounts(c);
+        } catch {
+            // non-fatal
+        }
+    }, []);
 
     const refresh = useCallback(async () => {
         setLoading(true);
         try {
-            const c = await window.api.agents.listCandidates(0);
-            setCandidates(c);
+            const [list] = await Promise.all([
+                bucket === 'ignored'
+                    ? window.api.agents.listIgnoredCandidates()
+                    : window.api.agents.listCandidates(0),
+                refreshCounts(),
+            ]);
+            setCandidates(list);
         } catch (err) {
             notifications.show({
                 color: 'red',
@@ -33,7 +81,7 @@ export function useCandidates() {
         } finally {
             setLoading(false);
         }
-    }, [t]);
+    }, [t, bucket, refreshCounts]);
 
     useEffect(() => {
         refresh();
@@ -48,11 +96,13 @@ export function useCandidates() {
     const filtered = useMemo(() => {
         const q = searchText.toLowerCase().trim();
         let list = candidates.filter((c) => {
-            if (c.score < minScore) return false;
-            if (statusFilter === 'new' && c.status !== 'new') return false;
-            if (statusFilter === 'favorite' && !c.favorite) return false;
-            if (statusFilter === 'imported' && c.status !== 'imported') return false;
-            if (statusFilter === 'all' && c.status === 'ignored') return false;
+            if (bucket === 'active') {
+                if (c.score < minScore) return false;
+                if (statusFilter === 'new' && c.status !== 'new') return false;
+                if (statusFilter === 'favorite' && !c.favorite) return false;
+                if (statusFilter === 'imported' && c.status !== 'imported') return false;
+                if (statusFilter === 'all' && c.status === 'ignored') return false;
+            }
             if (sourceFilter.length > 0) {
                 const matches = sourceFilter.some((src) => c.sourceKey.startsWith(src + ':'));
                 if (!matches) return false;
@@ -72,7 +122,7 @@ export function useCandidates() {
             return 0;
         });
         return list;
-    }, [candidates, minScore, statusFilter, sourceFilter, sortBy, searchText]);
+    }, [candidates, minScore, statusFilter, sourceFilter, sortBy, searchText, bucket]);
 
     const toggleSelect = (id: string) => {
         setSelectedIds((prev) => {
@@ -101,8 +151,102 @@ export function useCandidates() {
         await refresh();
     };
 
+    const bulkRestore = async () => {
+        await window.api.agents.bulkUpdateCandidates([...selectedIds], { status: 'new' });
+        setSelectedIds(new Set());
+        await refresh();
+    };
+
+    const bulkDelete = async () => {
+        const selected = [...selectedIds];
+        const idSet = new Set(selected);
+        const importedIds = candidates
+            .filter((c) => idSet.has(c.id) && c.status === 'imported')
+            .map((c) => c.id);
+        const deletableIds = selected.filter((id) => !importedIds.includes(id));
+
+        if (deletableIds.length === 0) {
+            notifications.show({
+                color: 'yellow',
+                message: `Alle ${importedIds.length} ausgewählten sind bereits als Bewerbung importiert und werden nicht gelöscht.`,
+            });
+            return;
+        }
+
+        const deleted = await window.api.agents.deleteCandidates(deletableIds);
+        setSelectedIds(new Set());
+        await refresh();
+
+        const skippedMsg =
+            importedIds.length > 0
+                ? ` · ${importedIds.length} übersprungen (als Bewerbung importiert)`
+                : '';
+        notifications.show({
+            color: 'green',
+            message: `${deleted} gelöscht${skippedMsg}`,
+        });
+    };
+
+    const deleteBelowScore = async (threshold: number) => {
+        const n = await window.api.agents.deleteCandidatesBelowScore(threshold);
+        await refresh();
+        notifications.show({
+            color: 'green',
+            message: `${n} Vorschläge mit Score < ${threshold} gelöscht.`,
+        });
+        return n;
+    };
+
+    const bulkRescore = async () => {
+        const ids = [...selectedIds];
+        if (ids.length === 0) return;
+        const notifId = 'bulk-rescore';
+        notifications.show({
+            id: notifId,
+            loading: true,
+            title: `Neu bewerte ${ids.length} Einträge`,
+            message: 'Das kann einen Moment dauern.',
+            autoClose: false,
+            withCloseButton: false,
+        });
+        try {
+            const result = await window.api.agents.rescoreCandidates(ids);
+            notifications.update({
+                id: notifId,
+                loading: false,
+                color: result.errors > 0 ? 'yellow' : 'green',
+                title: 'Neu bewertet',
+                message:
+                    result.errors > 0
+                        ? `${result.scored} neu bewertet, ${result.errors} Fehler (LLM offline?)`
+                        : `${result.scored} neu bewertet`,
+                autoClose: 4000,
+                withCloseButton: true,
+            });
+            setSelectedIds(new Set());
+            await refresh();
+        } catch (err) {
+            notifications.update({
+                id: notifId,
+                loading: false,
+                color: 'red',
+                title: 'Fehler',
+                message: (err as Error).message,
+                autoClose: 6000,
+                withCloseButton: true,
+            });
+        }
+    };
+
+    const rescoreSingle = async (id: string) => {
+        return window.api.agents.rescoreCandidate(id);
+    };
+
     return {
+        bucket,
+        setBucket,
         candidates,
+        counts,
         loading,
         filtered,
         minScore,
@@ -122,5 +266,10 @@ export function useCandidates() {
         refresh,
         bulkIgnore,
         bulkFavorite,
+        bulkRestore,
+        bulkDelete,
+        bulkRescore,
+        rescoreSingle,
+        deleteBelowScore,
     };
 }

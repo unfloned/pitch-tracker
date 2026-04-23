@@ -84,3 +84,22 @@ export function shortSource(src: string, max = 14): string {
     if (!src) return 'direct';
     return src.replace(/^https?:\/\//, '').replace(/\/$/, '').slice(0, max);
 }
+
+const CANDIDATE_SOURCE_SHORT: Record<string, string> = {
+    germantechjobs: 'GermanTechJobs',
+    remotive: 'Remotive',
+    arbeitnow: 'Arbeitnow',
+    remoteok: 'RemoteOK',
+    wwr: 'WeWorkRemotely',
+    weworkremotely: 'WeWorkRemotely',
+    hackernews: 'HackerNews',
+    indeed: 'Indeed',
+    url: 'Direct URL',
+};
+
+/** Extract and label the origin source from a candidate sourceKey like "hackernews:123". */
+export function candidateSourceLabel(sourceKey: string): string {
+    if (!sourceKey) return 'unknown';
+    const prefix = sourceKey.split(':')[0]?.toLowerCase() ?? '';
+    return CANDIDATE_SOURCE_SHORT[prefix] ?? (prefix || 'unknown');
+}

@@ -1,12 +1,15 @@
 import { ActionIcon, Drawer, Tooltip } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import {
     IconArrowUpRight,
     IconCheck,
     IconEyeOff,
     IconPlus,
+    IconRefresh,
     IconStar,
     IconStarFilled,
 } from '@tabler/icons-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SerializedJobCandidate } from '@shared/job-search';
 import { GhostBtn } from './primitives/GhostBtn';
@@ -21,6 +24,7 @@ interface Props {
     onImport: (candidate: SerializedJobCandidate) => void | Promise<void>;
     onDismiss: (candidate: SerializedJobCandidate) => void | Promise<void>;
     onToggleFavorite: (candidate: SerializedJobCandidate) => void | Promise<void>;
+    onRescore: (candidate: SerializedJobCandidate) => void | Promise<void>;
 }
 
 function timeAgo(iso: string): string {
@@ -40,6 +44,46 @@ function shortSource(key: string): string {
     return src || key;
 }
 
+const SUMMARY_COLLAPSED_LEN = 600;
+
+function SummaryBlock({ summary }: { summary: string }) {
+    const { t } = useTranslation();
+    const [expanded, setExpanded] = useState(false);
+    const needsToggle = summary.length > SUMMARY_COLLAPSED_LEN;
+    const shown = expanded || !needsToggle
+        ? summary
+        : summary.slice(0, SUMMARY_COLLAPSED_LEN).trimEnd() + '…';
+
+    return (
+        <div style={{ marginTop: 22 }}>
+            <Label>{t('candidates.summary')}</Label>
+            <div
+                style={{
+                    marginTop: 8,
+                    padding: 14,
+                    background: 'var(--card)',
+                    border: '1px solid var(--rule)',
+                    fontSize: 13.5,
+                    lineHeight: 1.55,
+                    color: 'var(--ink-2)',
+                    whiteSpace: 'pre-wrap',
+                }}
+            >
+                {shown}
+            </div>
+            {needsToggle && (
+                <div style={{ marginTop: 6 }}>
+                    <GhostBtn onClick={() => setExpanded((v) => !v)}>
+                        <span>
+                            {expanded ? t('candidates.showLess') : t('candidates.showMore')}
+                        </span>
+                    </GhostBtn>
+                </div>
+            )}
+        </div>
+    );
+}
+
 export function CandidateDrawer({
     candidate,
     opened,
@@ -47,11 +91,38 @@ export function CandidateDrawer({
     onImport,
     onDismiss,
     onToggleFavorite,
+    onRescore,
 }: Props) {
     const { t } = useTranslation();
+    const [rescoring, setRescoring] = useState(false);
     if (!candidate) return null;
 
     const isImported = candidate.status === 'imported';
+    const hasAnalysis =
+        candidate.keyFacts.length +
+            candidate.concerns.length +
+            candidate.redFlags.length >
+        0;
+
+    const handleRescore = async () => {
+        if (!candidate || rescoring) return;
+        setRescoring(true);
+        try {
+            await onRescore(candidate);
+            notifications.show({
+                color: 'green',
+                message: t('candidates.rescoreSuccess'),
+            });
+        } catch (err) {
+            notifications.show({
+                color: 'red',
+                title: t('candidates.rescoreFailed'),
+                message: (err as Error).message,
+            });
+        } finally {
+            setRescoring(false);
+        }
+    };
 
     return (
         <Drawer
@@ -184,13 +255,13 @@ export function CandidateDrawer({
                             borderRight: '1px solid var(--rule)',
                         }}
                     >
-                        <Label>Match</Label>
+                        <Label>{t('candidates.matchLabel')}</Label>
                         <div style={{ marginTop: 6 }}>
                             <MatchScore value={candidate.score} width={80} showValue />
                         </div>
                     </div>
                     <div style={{ padding: '10px 14px' }}>
-                        <Label>Entdeckt</Label>
+                        <Label>{t('candidates.discovered')}</Label>
                         <div
                             style={{
                                 fontSize: 13,
@@ -204,7 +275,57 @@ export function CandidateDrawer({
                     </div>
                 </div>
 
-                {/* scoring reason */}
+                {/* empty-analysis hint + rescore */}
+                {!hasAnalysis && (
+                    <div
+                        style={{
+                            marginTop: 22,
+                            padding: '10px 14px',
+                            background: 'var(--paper-2)',
+                            border: '1px dashed var(--rule-strong)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 10,
+                        }}
+                    >
+                        <span style={{ fontSize: 12, color: 'var(--ink-3)', flex: 1 }}>
+                            {t('candidates.noDetailedAnalysis')}
+                        </span>
+                        <GhostBtn onClick={handleRescore} disabled={rescoring}>
+                            <IconRefresh size={12} />
+                            <span>{rescoring ? t('candidates.rescoring') : t('candidates.rescore')}</span>
+                        </GhostBtn>
+                    </div>
+                )}
+
+                {/* red flags: hard disqualifiers */}
+                {candidate.redFlags.length > 0 && (
+                    <div
+                        style={{
+                            marginTop: 22,
+                            padding: '10px 14px',
+                            background: 'rgba(192, 48, 48, 0.06)',
+                            border: '1px solid rgba(192, 48, 48, 0.3)',
+                        }}
+                    >
+                        <Label>{t('candidates.redFlagsLabel')}</Label>
+                        <ul
+                            style={{
+                                margin: '8px 0 0',
+                                paddingLeft: 18,
+                                fontSize: 13,
+                                color: 'var(--danger, #7a1f1f)',
+                                lineHeight: 1.5,
+                            }}
+                        >
+                            {candidate.redFlags.map((flag, i) => (
+                                <li key={i}>{flag}</li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+
+                {/* scoring reason (verdict) */}
                 {candidate.scoreReason && (
                     <div
                         style={{
@@ -213,7 +334,7 @@ export function CandidateDrawer({
                             borderLeft: '3px solid var(--accent)',
                         }}
                     >
-                        <Label>Warum es passt</Label>
+                        <Label>{t('candidates.verdict')}</Label>
                         <p
                             className="serif"
                             style={{
@@ -231,35 +352,80 @@ export function CandidateDrawer({
                             className="mono"
                             style={{ fontSize: 10, color: 'var(--ink-4)' }}
                         >
-                            — local LLM score
+                            {t('candidates.localLlmScore')}
                         </span>
+                    </div>
+                )}
+
+                {/* key facts / concerns two-column grid */}
+                {(candidate.keyFacts.length > 0 || candidate.concerns.length > 0) && (
+                    <div
+                        style={{
+                            marginTop: 22,
+                            display: 'grid',
+                            gridTemplateColumns: '1fr 1fr',
+                            gap: 14,
+                        }}
+                    >
+                        {candidate.keyFacts.length > 0 && (
+                            <div
+                                style={{
+                                    padding: '10px 14px',
+                                    background: 'var(--card)',
+                                    border: '1px solid var(--rule)',
+                                }}
+                            >
+                                <Label>{t('candidates.strengths')}</Label>
+                                <ul
+                                    style={{
+                                        margin: '8px 0 0',
+                                        paddingLeft: 18,
+                                        fontSize: 12.5,
+                                        color: 'var(--ink-2)',
+                                        lineHeight: 1.5,
+                                    }}
+                                >
+                                    {candidate.keyFacts.map((fact, i) => (
+                                        <li key={i}>{fact}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                        {candidate.concerns.length > 0 && (
+                            <div
+                                style={{
+                                    padding: '10px 14px',
+                                    background: 'var(--card)',
+                                    border: '1px solid var(--rule)',
+                                }}
+                            >
+                                <Label>{t('candidates.concernsLabel')}</Label>
+                                <ul
+                                    style={{
+                                        margin: '8px 0 0',
+                                        paddingLeft: 18,
+                                        fontSize: 12.5,
+                                        color: 'var(--ink-3)',
+                                        lineHeight: 1.5,
+                                    }}
+                                >
+                                    {candidate.concerns.map((concern, i) => (
+                                        <li key={i}>{concern}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
                     </div>
                 )}
 
                 {/* summary */}
                 {candidate.summary && (
-                    <div style={{ marginTop: 22 }}>
-                        <Label>Zusammenfassung</Label>
-                        <div
-                            style={{
-                                marginTop: 8,
-                                padding: 14,
-                                background: 'var(--card)',
-                                border: '1px solid var(--rule)',
-                                fontSize: 13.5,
-                                lineHeight: 1.55,
-                                color: 'var(--ink-2)',
-                                whiteSpace: 'pre-wrap',
-                            }}
-                        >
-                            {candidate.summary}
-                        </div>
-                    </div>
+                    <SummaryBlock summary={candidate.summary} />
                 )}
 
                 {/* source */}
                 <div style={{ marginTop: 22 }}>
-                    <Label>Gefunden in</Label>
+                    <Label>{t('candidates.foundIn')}</Label>
                     <div
                         style={{
                             marginTop: 8,
@@ -343,13 +509,17 @@ export function CandidateDrawer({
                         </GhostBtn>
                     </>
                 )}
+                <GhostBtn onClick={handleRescore} disabled={rescoring}>
+                    <IconRefresh size={12} />
+                    <span>{rescoring ? t('candidates.rescoring') : t('candidates.rescore')}</span>
+                </GhostBtn>
                 <div style={{ flex: 1 }} />
                 {candidate.sourceUrl && (
                     <GhostBtn
                         onClick={() => window.api.shell.openExternal(candidate.sourceUrl)}
                     >
                         <IconArrowUpRight size={12} />
-                        <span>Zur Quelle</span>
+                        <span>{t('candidates.viewSource')}</span>
                     </GhostBtn>
                 )}
             </div>

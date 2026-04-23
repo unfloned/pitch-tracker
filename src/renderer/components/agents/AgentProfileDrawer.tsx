@@ -12,6 +12,7 @@ import {
     Switch,
     TagsInput,
     Text,
+    Textarea,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useEffect, useState } from 'react';
@@ -35,6 +36,8 @@ export function AgentProfileDrawer({ opened, onClose }: Props) {
     const [profile, setProfile] = useState<AgentProfile | null>(null);
     const [stackTags, setStackTags] = useState<string[]>([]);
     const [antiTags, setAntiTags] = useState<string[]>([]);
+    const [excludeTags, setExcludeTags] = useState<string[]>([]);
+    const [llmInstruction, setLlmInstruction] = useState('');
     const [salaryEnabled, setSalaryEnabled] = useState(false);
     const [autoImportEnabled, setAutoImportEnabled] = useState(false);
     const [salaryValue, setSalaryValue] = useState(60000);
@@ -46,6 +49,8 @@ export function AgentProfileDrawer({ opened, onClose }: Props) {
             setProfile(p);
             setStackTags(splitToList(p.stackKeywords));
             setAntiTags(splitToList(p.antiStack));
+            setExcludeTags(Array.isArray(p.excludes) ? p.excludes : []);
+            setLlmInstruction(p.llmInstruction ?? '');
             setSalaryEnabled(p.minSalary > 0);
             setSalaryValue(p.minSalary > 0 ? p.minSalary : 60000);
             setAutoImportEnabled(p.autoImportThreshold > 0);
@@ -59,6 +64,8 @@ export function AgentProfileDrawer({ opened, onClose }: Props) {
             ...profile,
             stackKeywords: stackTags.join(', '),
             antiStack: antiTags.join(', '),
+            excludes: excludeTags,
+            llmInstruction,
             minSalary: salaryEnabled ? salaryValue : 0,
             autoImportThreshold: autoImportEnabled ? autoImportValue : 0,
         });
@@ -99,6 +106,27 @@ export function AgentProfileDrawer({ opened, onClose }: Props) {
                         onChange={setAntiTags}
                         splitChars={[',', ';']}
                         clearable
+                    />
+
+                    <Divider label={t('profileDrawer.llmControl')} labelPosition="left" />
+                    <TagsInput
+                        label={t('profileDrawer.hardExcludes')}
+                        description={t('profileDrawer.hardExcludesHint')}
+                        placeholder={t('profileDrawer.hardExcludesPlaceholder')}
+                        value={excludeTags}
+                        onChange={setExcludeTags}
+                        splitChars={[';']}
+                        clearable
+                    />
+                    <Textarea
+                        label={t('profileDrawer.llmInstruction')}
+                        description={t('profileDrawer.llmInstructionHint')}
+                        placeholder={t('profileDrawer.llmInstructionPlaceholder')}
+                        value={llmInstruction}
+                        onChange={(e) => setLlmInstruction(e.currentTarget.value)}
+                        autosize
+                        minRows={3}
+                        maxRows={8}
                     />
 
                     <Divider label={t('profileDrawer.workPreferences')} labelPosition="left" />

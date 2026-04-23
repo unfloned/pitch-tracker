@@ -11,6 +11,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import type { ApplicationRecord } from '../../../preload/index';
 import type { SerializedJobCandidate } from '@shared/job-search';
+import { candidateSourceLabel } from '../../lib/format';
 import { MatchScore } from '../primitives/MatchScore';
 import { timeAgo } from './utils';
 
@@ -97,24 +98,38 @@ export function CandidateRow({
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
                     }}
                 >
-                    {[c.company, c.location, timeAgo(c.discoveredAt)]
-                        .filter(Boolean)
-                        .join(' · ')}
+                    <SourceBadge sourceKey={c.sourceKey} />
+                    <span
+                        style={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            minWidth: 0,
+                        }}
+                    >
+                        {[c.company, c.location, timeAgo(c.discoveredAt)]
+                            .filter(Boolean)
+                            .join(' · ')}
+                    </span>
                 </div>
-                {c.scoreReason && (
+                {(c.redFlags[0] || c.scoreReason) && (
                     <div
                         style={{
                             fontSize: 11.5,
-                            color: 'var(--ink-2)',
+                            color: c.redFlags[0] ? 'var(--danger, #c03030)' : 'var(--ink-2)',
                             marginTop: 3,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
+                            fontWeight: c.redFlags[0] ? 600 : 400,
                         }}
                     >
-                        {c.scoreReason}
+                        {c.redFlags[0] ? `⚠ ${c.redFlags[0]}` : c.scoreReason}
                     </div>
                 )}
             </div>
@@ -185,7 +200,7 @@ export function CandidateRow({
                         </Tooltip>
                     </>
                 )}
-                <Tooltip label="Zur Quelle">
+                <Tooltip label={t('candidates.viewSource')}>
                     <ActionIcon
                         variant="subtle"
                         size="sm"
@@ -201,6 +216,28 @@ export function CandidateRow({
                 </Tooltip>
             </div>
         </div>
+    );
+}
+
+function SourceBadge({ sourceKey }: { sourceKey: string }) {
+    const label = candidateSourceLabel(sourceKey);
+    return (
+        <span
+            style={{
+                display: 'inline-block',
+                padding: '1px 5px',
+                background: 'var(--paper-2)',
+                border: '1px solid var(--rule)',
+                color: 'var(--ink-2)',
+                fontSize: 9.5,
+                fontWeight: 600,
+                letterSpacing: '0.03em',
+                textTransform: 'uppercase',
+                flexShrink: 0,
+            }}
+        >
+            {label}
+        </span>
     );
 }
 
