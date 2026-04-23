@@ -2,6 +2,34 @@
 
 All notable changes are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 0.5.0
+
+### Added
+- **Mail inbox** (new workspace tab): IMAP fetch of unread replies, local-LLM classification that suggests a status and note per application, one-click apply that updates the status and prepends the note. IMAP credentials in the Settings profile, encrypted via OS keychain
+- **Structured scoring output**: every candidate now gets keyFacts, concerns and redFlags alongside the score and short verdict. Prominent red-flag panel in the drawer
+- **Agent profile steering**: natural-language hard exclude list and a free-text LLM instruction field that rides along on every scoring call
+- **Re-score action**: per-candidate button in the drawer and bulk re-score from the candidates list
+- **Candidate buckets**: split tabs for suggestions and dismissed with counts, restore and permanent-delete actions
+- **Bulk actions on candidates**: favorite, dismiss, restore, hard-delete, and a "delete all below 50" cleanup shortcut
+- **Column visibility toggle** on the Applications list (ID, salary, location, match, source, updated)
+- **Filter persistence** on Candidates and Applications (min-score, source, status, sort, bucket, columns survive reload)
+- **Ollama model catalog**: grouped picker with ~25 curated models (Llama, Qwen, Gemma, Mistral, Phi, DeepSeek R1) plus free-text entry; pull timeout removed so 70B-class downloads do not abort
+- **Fit-check in the form header**: compact bar with score, short verdict and a single re-check icon. Replaces the old collapsable section at the bottom of the form
+- **Adjustable UI text size**: independent sliders for sidebar and main content in Settings
+
+### Changed
+- Job extraction prompt asks for substantial descriptions (4-8 sentences) instead of 1-2; wider context window (16k tokens) and higher output token budget (2048) so long pages no longer truncate the JSON
+- HTML stripping for scraped job pages keeps paragraph and list structure so the LLM can see sections instead of one blob
+- Scraper summaries slice at 3000 chars instead of 400 so the local scorer has enough context without fetching the full job URL
+- Summary block in the candidate drawer collapses past 600 chars with Show more / Show less
+- Native window.confirm replaced by Mantine confirm modals for bulk delete and cleanup actions
+- Sidebar layout reworked so the Textgröße Sidebar slider scales only the text, not the navbar box
+- Remaining German-only strings in the candidate UI, agent profile drawer, settings and confirmations moved into the en/de translation files
+
+### Fixed
+- Candidate scoring would truncate structured JSON responses at Ollama's 128-token default output cap
+- Padding around the content area no longer scales with the Textgröße Inhalt slider
+
 ## 0.4.0
 
 Renamed from "Simple Application Tracker" to **Pitch Tracker**. First public release.
