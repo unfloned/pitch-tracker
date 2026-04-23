@@ -55,6 +55,29 @@
     --window-bg: #0a0a0c;
 }
 
+:root {
+    /* User-tunable UI scale. --zoom-content only scales the main content
+       area, --zoom-sidebar-rel only scales the sidebar text. They do not
+       affect each other, the header, or the footer. */
+    --zoom-content: 1;
+    --zoom-sidebar-rel: 1;
+}
+
+.content-zoom {
+    zoom: var(--zoom-content);
+}
+
+/* Sidebar text size: purely a font-size change on the inner container.
+   Items inside use em so they grow with the text. The navbar box itself
+   stays untouched, 220px wide, full viewport height between header and
+   footer. If the scaled text makes items taller than the box, the inner
+   container scrolls. */
+.sidebar-root {
+    font-size: calc(13px * var(--zoom-sidebar-rel, 1));
+    height: 100%;
+    overflow-y: auto;
+}
+
 html,
 body {
     margin: 0;

@@ -1,12 +1,13 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 interface Props {
     children: ReactNode;
     tone?: 'light' | 'dark';
+    style?: CSSProperties;
 }
 
 /** Keyboard shortcut chip. Use tone="dark" on dark backgrounds. */
-export function Kbd({ children, tone = 'light' }: Props) {
+export function Kbd({ children, tone = 'light', style }: Props) {
     return (
         <span
             className="mono"
@@ -27,6 +28,7 @@ export function Kbd({ children, tone = 'light' }: Props) {
                 fontSize: 10,
                 fontWeight: 500,
                 letterSpacing: '0.02em',
+                ...style,
             }}
         >
             {children}

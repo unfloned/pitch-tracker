@@ -40,16 +40,16 @@ function SidebarItem({
             style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 10,
-                height: 26,
-                padding: '0 10px',
+                gap: '0.77em',
+                minHeight: '2em',
+                padding: '0.2em 0.77em',
                 marginInline: 6,
                 borderRadius: 3,
                 background: active ? 'var(--paper-3)' : 'transparent',
                 color: active ? 'var(--ink)' : 'var(--ink-2)',
                 cursor: 'pointer',
                 borderLeft: active ? '2px solid var(--accent)' : '2px solid transparent',
-                paddingLeft: active ? 8 : 10,
+                paddingLeft: active ? '0.62em' : '0.77em',
                 transition: 'background 80ms',
             }}
             onMouseEnter={(e) => {
@@ -62,8 +62,8 @@ function SidebarItem({
             <span
                 className="mono"
                 style={{
-                    width: 38,
-                    fontSize: 9.5,
+                    width: '2.9em',
+                    fontSize: '0.73em',
                     letterSpacing: '0.06em',
                     fontWeight: 600,
                     color: active ? 'var(--ink-2)' : 'var(--ink-4)',
@@ -73,7 +73,7 @@ function SidebarItem({
             </span>
             <span
                 style={{
-                    fontSize: 12.5,
+                    fontSize: '0.96em',
                     fontWeight: active ? 600 : 500,
                     flex: 1,
                 }}
@@ -84,7 +84,7 @@ function SidebarItem({
                 <span
                     className="mono tnum"
                     style={{
-                        fontSize: 10,
+                        fontSize: '0.77em',
                         color: active ? 'var(--ink-2)' : 'var(--ink-3)',
                         fontWeight: 500,
                     }}
@@ -92,7 +92,18 @@ function SidebarItem({
                     {count}
                 </span>
             )}
-            {shortcut && <Kbd>{shortcut}</Kbd>}
+            {shortcut && (
+                <Kbd
+                    style={{
+                        fontSize: '0.77em',
+                        minWidth: '1.4em',
+                        height: '1.4em',
+                        padding: '0 0.4em',
+                    }}
+                >
+                    {shortcut}
+                </Kbd>
+            )}
         </div>
     );
 }
@@ -101,7 +112,7 @@ function SidebarGroup({ label, children }: { label: string; children: React.Reac
     return (
         <div style={{ marginTop: 14 }}>
             <div style={{ padding: '0 14px 4px' }}>
-                <Label>{label}</Label>
+                <Label style={{ fontSize: '0.77em' }}>{label}</Label>
             </div>
             {children}
         </div>
@@ -144,8 +155,8 @@ export function Sidebar({ applicationsCount, candidatesCount }: Props) {
 
     return (
         <div
+            className="sidebar-root"
             style={{
-                height: '100%',
                 background: 'var(--paper)',
                 borderRight: '1px solid var(--rule-strong)',
                 display: 'flex',
@@ -162,7 +173,7 @@ export function Sidebar({ applicationsCount, candidatesCount }: Props) {
                     <span
                         className="serif"
                         style={{
-                            fontSize: 20,
+                            fontSize: '1.54em',
                             fontWeight: 600,
                             color: 'var(--ink)',
                             letterSpacing: '-0.01em',
@@ -175,7 +186,7 @@ export function Sidebar({ applicationsCount, candidatesCount }: Props) {
                 <div
                     className="mono"
                     style={{
-                        fontSize: 10,
+                        fontSize: '0.77em',
                         color: 'var(--ink-3)',
                         marginTop: 2,
                         letterSpacing: '0.04em',
@@ -209,64 +220,6 @@ export function Sidebar({ applicationsCount, candidatesCount }: Props) {
                 onClick={() => navigate(ROUTES.settings)}
             />
 
-            <div
-                style={{
-                    margin: 10,
-                    padding: '8px 10px',
-                    background: 'var(--card)',
-                    border: '1px solid var(--rule)',
-                    borderRadius: 4,
-                }}
-            >
-                <div
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        marginBottom: 4,
-                    }}
-                >
-                    <div
-                        style={{
-                            width: 7,
-                            height: 7,
-                            borderRadius: '50%',
-                            background:
-                                ollamaRunning === null
-                                    ? 'var(--ink-4)'
-                                    : ollamaRunning
-                                      ? 'var(--moss)'
-                                      : 'var(--rust)',
-                        }}
-                    />
-                    <span
-                        className="mono"
-                        style={{
-                            fontSize: 10,
-                            color: 'var(--ink-2)',
-                            letterSpacing: '0.05em',
-                            fontWeight: 600,
-                        }}
-                    >
-                        OLLAMA ·{' '}
-                        {ollamaRunning === null
-                            ? '...'
-                            : ollamaRunning
-                              ? 'READY'
-                              : 'OFFLINE'}
-                    </span>
-                </div>
-                <div
-                    className="mono"
-                    style={{
-                        fontSize: 10,
-                        color: 'var(--ink-3)',
-                        letterSpacing: '0.02em',
-                    }}
-                >
-                    {ollamaRunning ? 'local LLM idle' : 'run ollama serve'}
-                </div>
-            </div>
         </div>
     );
 }

@@ -1,8 +1,9 @@
-import { SegmentedControl, useMantineColorScheme } from '@mantine/core';
+import { SegmentedControl, Slider, useMantineColorScheme } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { setLanguage, type Language } from '../i18n';
+import { applyZoom, loadZoom, saveZoom, ZOOM_MAX, ZOOM_MIN } from '../lib/zoom';
 import { BackupCard } from '../components/settings/BackupCard';
 import { EmailStyleCard } from '../components/settings/EmailStyleCard';
 import { OllamaCard } from '../components/settings/OllamaCard';
@@ -14,10 +15,24 @@ export function SettingsPage() {
     const { t, i18n } = useTranslation();
     const { colorScheme, setColorScheme } = useMantineColorScheme();
     const [version, setVersion] = useState<string>('');
+    const [zoom, setZoom] = useState(() => loadZoom());
 
     useEffect(() => {
         window.api.updater.currentVersion().then((v) => setVersion(v.version));
     }, []);
+
+    const updateZoomContent = (v: number) => {
+        const next = { ...zoom, content: v };
+        setZoom(next);
+        applyZoom(next);
+        saveZoom(next);
+    };
+    const updateZoomSidebar = (v: number) => {
+        const next = { ...zoom, sidebar: v };
+        setZoom(next);
+        applyZoom(next);
+        saveZoom(next);
+    };
 
     const checkUpdate = async () => {
         const result = await window.api.updater.checkNow();
@@ -89,6 +104,44 @@ export function SettingsPage() {
                             ]}
                             size="xs"
                         />
+                    </SettingsRow>
+                    <SettingsRow
+                        label={t('settings.zoomContent')}
+                        description={t('settings.zoomContentHint')}
+                    >
+                        <div style={{ width: 200 }}>
+                            <Slider
+                                min={ZOOM_MIN}
+                                max={ZOOM_MAX}
+                                step={0.05}
+                                value={zoom.content}
+                                onChange={updateZoomContent}
+                                label={(v) => `${Math.round(v * 100)} %`}
+                                marks={[
+                                    { value: 1, label: '100 %' },
+                                ]}
+                                size="sm"
+                            />
+                        </div>
+                    </SettingsRow>
+                    <SettingsRow
+                        label={t('settings.zoomSidebar')}
+                        description={t('settings.zoomSidebarHint')}
+                    >
+                        <div style={{ width: 200 }}>
+                            <Slider
+                                min={ZOOM_MIN}
+                                max={ZOOM_MAX}
+                                step={0.05}
+                                value={zoom.sidebar}
+                                onChange={updateZoomSidebar}
+                                label={(v) => `${Math.round(v * 100)} %`}
+                                marks={[
+                                    { value: 1, label: '100 %' },
+                                ]}
+                                size="sm"
+                            />
+                        </div>
                     </SettingsRow>
                 </SettingsSection>
 

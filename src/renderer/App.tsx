@@ -23,6 +23,7 @@ import { ChatPage } from './pages/ChatPage';
 import { InboxPage } from './pages/InboxPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ROUTES } from './routes';
+import { applyZoom, loadZoom } from './lib/zoom';
 
 const ONBOARDING_KEY = 'simple-tracker-onboarded';
 
@@ -58,6 +59,7 @@ export function App() {
     }, []);
 
     useEffect(() => {
+        applyZoom(loadZoom());
         refresh();
         refreshCandidateCount();
 
@@ -381,7 +383,11 @@ export function App() {
                 <UpdateBanner />
                 {/* Full-bleed pages fill the viewport minus chrome and manage
                     their own internal scroll. Padded pages flow naturally and
-                    let the document scroll like a normal page. */}
+                    let the document scroll like a normal page.
+                    The outer div owns the layout chrome (padding + fixed
+                    height) and is NOT scaled. The inner .content-zoom
+                    wrapper receives the zoom so the padding around the
+                    content stays constant when the user changes text size. */}
                 <div
                     style={
                         isFullBleed
@@ -392,6 +398,19 @@ export function App() {
                                   overflow: 'hidden',
                               }
                             : { padding: '20px 24px' }
+                    }
+                >
+                <div
+                    className="content-zoom"
+                    style={
+                        isFullBleed
+                            ? {
+                                  flex: 1,
+                                  minHeight: 0,
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                              }
+                            : {}
                     }
                 >
                 <Routes>
@@ -468,6 +487,7 @@ export function App() {
                     <Route path={ROUTES.settings} element={<SettingsPage />} />
                     <Route path="*" element={<Navigate to={ROUTES.dashboard} replace />} />
                 </Routes>
+                </div>
                 </div>
             </AppShell.Main>
 

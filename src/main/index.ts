@@ -16,6 +16,8 @@ function createWindow(): void {
         return;
     }
 
+    const iconPath = join(__dirname, '../../resources/icon.png');
+
     mainWindow = new BrowserWindow({
         width: 1280,
         height: 820,
@@ -24,6 +26,7 @@ function createWindow(): void {
         title: 'Pitch Tracker',
         backgroundColor: '#f4efe6',
         titleBarStyle: 'hiddenInset',
+        icon: iconPath,
         show: false,
         webPreferences: {
             preload: join(__dirname, '../preload/index.js'),
@@ -32,6 +35,14 @@ function createWindow(): void {
             sandbox: false,
         },
     });
+
+    // macOS dev mode: set the Dock icon explicitly. In packaged builds the
+    // Info.plist/bundle icon handles this; in `electron-vite dev` there is no
+    // bundle so the default Electron icon shows unless we override.
+    if (process.platform === 'darwin' && process.env.ELECTRON_RENDERER_URL && app.dock) {
+        const dockImage = nativeImage.createFromPath(iconPath);
+        if (!dockImage.isEmpty()) app.dock.setIcon(dockImage);
+    }
 
     mainWindow.on('ready-to-show', () => mainWindow?.show());
     mainWindow.on('closed', () => {
