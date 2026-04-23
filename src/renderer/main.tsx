@@ -6,6 +6,7 @@ import './i18n';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { MantineProvider, localStorageColorSchemeManager } from '@mantine/core';
+import { ModalsProvider } from '@mantine/modals';
 import { Notifications } from '@mantine/notifications';
 import { HashRouter } from 'react-router-dom';
 import { App } from './App';
@@ -64,10 +65,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 defaultColorScheme="light"
                 colorSchemeManager={colorSchemeManager}
             >
-                <Notifications position="bottom-right" />
-                <HashRouter>
-                    <App />
-                </HashRouter>
+                <ModalsProvider>
+                    <Notifications position="bottom-right" />
+                    <HashRouter>
+                        <App />
+                    </HashRouter>
+                </ModalsProvider>
             </MantineProvider>
         </RootErrorBoundary>
     </React.StrictMode>,
