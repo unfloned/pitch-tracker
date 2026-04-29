@@ -1,4 +1,14 @@
-import { useEffect, useState } from 'react';
+import {
+    IconBriefcase,
+    IconChartBar,
+    IconInbox,
+    IconMail,
+    IconMessage,
+    IconRobot,
+    IconSettings,
+    IconSparkles,
+} from '@tabler/icons-react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ROUTES, type RoutePath } from '../routes';
@@ -7,8 +17,7 @@ import { Label } from './primitives/Label';
 
 interface NavItem {
     path: RoutePath;
-    /** 3-5 char mono icon text in place of vector icons. */
-    tag: string;
+    icon: ReactNode;
     labelKey: string;
     count?: number;
     shortcut?: string;
@@ -20,14 +29,14 @@ interface Props {
 }
 
 function SidebarItem({
-    tag,
+    icon,
     label,
     count,
     active,
     shortcut,
     onClick,
 }: {
-    tag: string;
+    icon: ReactNode;
     label: string;
     count?: number;
     active: boolean;
@@ -60,16 +69,16 @@ function SidebarItem({
             }}
         >
             <span
-                className="mono"
                 style={{
-                    width: '2.9em',
-                    fontSize: '0.73em',
-                    letterSpacing: '0.06em',
-                    fontWeight: 600,
-                    color: active ? 'var(--ink-2)' : 'var(--ink-4)',
+                    width: '1.4em',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: active ? 'var(--ink)' : 'var(--ink-3)',
+                    flexShrink: 0,
                 }}
             >
-                {tag}
+                {icon}
             </span>
             <span
                 style={{
@@ -119,6 +128,8 @@ function SidebarGroup({ label, children }: { label: string; children: React.Reac
     );
 }
 
+const ICON_SIZE = 15;
+
 export function Sidebar({ applicationsCount, candidatesCount }: Props) {
     const { t } = useTranslation();
     const navigate = useNavigate();
@@ -141,13 +152,13 @@ export function Sidebar({ applicationsCount, candidatesCount }: Props) {
     }, []);
 
     const items: NavItem[] = [
-        { path: ROUTES.dashboard,    tag: 'INBOX',  labelKey: 'nav.inbox',           shortcut: '⌘1' },
-        { path: ROUTES.applications, tag: 'APPS',   labelKey: 'tabs.applications',   count: applicationsCount,          shortcut: '⌘2' },
-        { path: ROUTES.candidates,   tag: 'CAND',   labelKey: 'tabs.candidates',     count: candidatesCount,            shortcut: '⌘3' },
-        { path: ROUTES.inbox,        tag: 'MAIL',   labelKey: 'nav.mail',            shortcut: '⌘4' },
-        { path: ROUTES.agents,       tag: 'AGENT',  labelKey: 'nav.agents',          shortcut: '⌘5' },
-        { path: ROUTES.chat,         tag: 'ASSIST', labelKey: 'nav.chat',            shortcut: '⌘6' },
-        { path: ROUTES.analytics,    tag: 'ANLY',   labelKey: 'nav.analytics',       shortcut: '⌘7' },
+        { path: ROUTES.dashboard,    icon: <IconInbox size={ICON_SIZE} />,     labelKey: 'nav.inbox',         shortcut: '⌘1' },
+        { path: ROUTES.applications, icon: <IconBriefcase size={ICON_SIZE} />, labelKey: 'tabs.applications', count: applicationsCount, shortcut: '⌘2' },
+        { path: ROUTES.candidates,   icon: <IconSparkles size={ICON_SIZE} />,  labelKey: 'tabs.candidates',   count: candidatesCount,   shortcut: '⌘3' },
+        { path: ROUTES.inbox,        icon: <IconMail size={ICON_SIZE} />,      labelKey: 'nav.mail',          shortcut: '⌘4' },
+        { path: ROUTES.agents,       icon: <IconRobot size={ICON_SIZE} />,     labelKey: 'nav.agents',        shortcut: '⌘5' },
+        { path: ROUTES.chat,         icon: <IconMessage size={ICON_SIZE} />,   labelKey: 'nav.chat',          shortcut: '⌘6' },
+        { path: ROUTES.analytics,    icon: <IconChartBar size={ICON_SIZE} />,  labelKey: 'nav.analytics',     shortcut: '⌘7' },
     ];
 
     const isActive = (path: string) =>
@@ -200,7 +211,7 @@ export function Sidebar({ applicationsCount, candidatesCount }: Props) {
                 {items.map((item) => (
                     <SidebarItem
                         key={item.path}
-                        tag={item.tag}
+                        icon={item.icon}
                         label={t(item.labelKey)}
                         count={item.count}
                         shortcut={item.shortcut}
@@ -213,7 +224,7 @@ export function Sidebar({ applicationsCount, candidatesCount }: Props) {
             <div style={{ flex: 1 }} />
 
             <SidebarItem
-                tag="SET"
+                icon={<IconSettings size={ICON_SIZE} />}
                 label={t('toolbar.settings')}
                 active={isActive(ROUTES.settings)}
                 shortcut="⌘,"
