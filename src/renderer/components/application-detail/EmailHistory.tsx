@@ -1,55 +1,94 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { SentEmailRecord } from '../../../preload/index';
+import type { InboundEmailDto, SentEmailRecord } from '../../../preload/index';
 import { formatDateShort, formatEventTime, stripHtmlSnippet } from '../../lib/format';
 import { Label } from '../primitives/Label';
 
 interface Props {
     emails: SentEmailRecord[];
+    inbounds: InboundEmailDto[];
 }
 
-/** Section that lists all emails sent for this application. Rows expand. */
-export function EmailHistory({ emails }: Props) {
+type Item =
+    | { kind: 'sent'; data: SentEmailRecord; ts: string }
+    | { kind: 'inbound'; data: InboundEmailDto; ts: string };
+
+function rowKey(item: Item): string {
+    return item.kind === 'sent' ? `s-${item.data.id}` : `i-${item.data.id}`;
+}
+
+/** Combined sent + inbound mail history for one application. */
+export function EmailHistory({ emails, inbounds }: Props) {
     const { t } = useTranslation();
     const [expandedId, setExpandedId] = useState<string | null>(null);
 
-    if (emails.length === 0) return null;
+    const items: Item[] = [
+        ...emails.map((e): Item => ({ kind: 'sent', data: e, ts: e.sentAt })),
+        ...inbounds.map((e): Item => ({ kind: 'inbound', data: e, ts: e.receivedAt })),
+    ].sort((a, b) => b.ts.localeCompare(a.ts));
+
+    if (items.length === 0) return null;
 
     return (
         <div style={{ marginTop: 28 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                 <Label>
-                    {t('detail.emails.label', 'Versendet')} · {emails.length}
+                    {t('detail.emails.label', 'Mail-Verlauf')} · {items.length}
                 </Label>
                 <div style={{ flex: 1, height: 1, background: 'var(--rule)' }} />
             </div>
             <div style={{ border: '1px solid var(--rule)', background: 'var(--card)' }}>
-                {emails.map((email, i) => (
-                    <EmailRow
-                        key={email.id}
-                        email={email}
-                        isLast={i === emails.length - 1}
-                        expanded={expandedId === email.id}
-                        onToggle={() =>
-                            setExpandedId((prev) => (prev === email.id ? null : email.id))
-                        }
-                    />
-                ))}
+                {items.map((item, i) => {
+                    const key = rowKey(item);
+                    return (
+                        <Row
+                            key={key}
+                            item={item}
+                            isLast={i === items.length - 1}
+                            expanded={expandedId === key}
+                            onToggle={() =>
+                                setExpandedId((prev) => (prev === key ? null : key))
+                            }
+                        />
+                    );
+                })}
             </div>
         </div>
     );
 }
 
 interface RowProps {
-    email: SentEmailRecord;
+    item: Item;
     isLast: boolean;
     expanded: boolean;
     onToggle: () => void;
 }
 
-function EmailRow({ email, isLast, expanded, onToggle }: RowProps) {
-    const stamp = `${formatDateShort(email.sentAt)} · ${formatEventTime(email.sentAt)}`;
-    const failed = email.status !== 'ok';
+function Row({ item, isLast, expanded, onToggle }: RowProps) {
+    const isInbound = item.kind === 'inbound';
+    const stamp = `${formatDateShort(item.ts)} · ${formatEventTime(item.ts)}`;
+
+    let dotColor: string;
+    let direction: string;
+    let title: string;
+    let secondary: string;
+
+    if (item.kind === 'sent') {
+        const failed = item.data.status !== 'ok';
+        dotColor = failed ? 'var(--rust)' : 'var(--moss)';
+        direction = '→';
+        title = item.data.subject || '—';
+        secondary = `${item.data.toAddress} · ${stripHtmlSnippet(item.data.body, 80)}`;
+    } else {
+        dotColor = 'var(--ink-2)';
+        direction = '←';
+        title = item.data.subject || '—';
+        const sender = item.data.fromName
+            ? `${item.data.fromName} <${item.data.fromAddress}>`
+            : item.data.fromAddress;
+        const snippet = item.data.bodyText.replace(/\s+/g, ' ').slice(0, 80);
+        secondary = `${sender} · ${snippet}`;
+    }
 
     return (
         <div style={{ borderBottom: isLast ? 'none' : '1px solid var(--rule)' }}>
@@ -58,7 +97,7 @@ function EmailRow({ email, isLast, expanded, onToggle }: RowProps) {
                 onClick={onToggle}
                 style={{
                     display: 'grid',
-                    gridTemplateColumns: '10px 130px 1fr 16px',
+                    gridTemplateColumns: '10px 14px 130px 1fr 16px',
                     columnGap: 12,
                     alignItems: 'center',
                     width: '100%',
@@ -75,9 +114,18 @@ function EmailRow({ email, isLast, expanded, onToggle }: RowProps) {
                         width: 7,
                         height: 7,
                         borderRadius: '50%',
-                        background: failed ? 'var(--rust)' : 'var(--moss)',
+                        background: dotColor,
                     }}
                 />
+                <span
+                    style={{
+                        fontSize: 12,
+                        color: 'var(--ink-3)',
+                        fontFamily: 'var(--f-mono)',
+                    }}
+                >
+                    {direction}
+                </span>
                 <span
                     className="mono"
                     style={{
@@ -99,7 +147,7 @@ function EmailRow({ email, isLast, expanded, onToggle }: RowProps) {
                             whiteSpace: 'nowrap',
                         }}
                     >
-                        {email.subject || '—'}
+                        {title}
                     </div>
                     <div
                         style={{
@@ -111,7 +159,7 @@ function EmailRow({ email, isLast, expanded, onToggle }: RowProps) {
                             marginTop: 2,
                         }}
                     >
-                        {email.toAddress} · {stripHtmlSnippet(email.body, 80)}
+                        {secondary}
                     </div>
                 </div>
                 <span
@@ -125,12 +173,12 @@ function EmailRow({ email, isLast, expanded, onToggle }: RowProps) {
                     ›
                 </span>
             </button>
-            {expanded && <ExpandedBody email={email} />}
+            {expanded && (isInbound ? <InboundBody item={item.data} /> : <SentBody email={item.data} />)}
         </div>
     );
 }
 
-function ExpandedBody({ email }: { email: SentEmailRecord }) {
+function SentBody({ email }: { email: SentEmailRecord }) {
     return (
         <div
             style={{
@@ -158,6 +206,53 @@ function ExpandedBody({ email }: { email: SentEmailRecord }) {
                 }}
                 dangerouslySetInnerHTML={{ __html: email.body }}
             />
+        </div>
+    );
+}
+
+function InboundBody({ item }: { item: InboundEmailDto }) {
+    const { t } = useTranslation();
+    return (
+        <div
+            style={{
+                padding: '12px 20px 18px',
+                borderTop: '1px dashed var(--rule)',
+                background: 'var(--paper)',
+            }}
+        >
+            <div
+                style={{
+                    fontSize: 11,
+                    color: 'var(--ink-4)',
+                    marginBottom: 8,
+                    fontFamily: 'var(--f-mono)',
+                    letterSpacing: '0.04em',
+                }}
+            >
+                {new Date(item.receivedAt).toLocaleString()} · {item.fromAddress}
+            </div>
+            {item.suggestedStatus && item.reviewStatus === 'applied' && (
+                <div
+                    style={{
+                        fontSize: 11,
+                        color: 'var(--ink-3)',
+                        marginBottom: 10,
+                        fontFamily: 'var(--f-mono)',
+                    }}
+                >
+                    auto-applied · {t(`status.${item.suggestedStatus}`, item.suggestedStatus)} · {item.confidence}%
+                </div>
+            )}
+            <div
+                style={{
+                    fontSize: 13.5,
+                    color: 'var(--ink)',
+                    lineHeight: 1.55,
+                    whiteSpace: 'pre-wrap',
+                }}
+            >
+                {item.bodyText}
+            </div>
         </div>
     );
 }

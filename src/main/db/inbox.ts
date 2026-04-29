@@ -83,6 +83,15 @@ export function listInboundEmails(reviewStatus?: InboundReviewStatus): InboundEm
         .all() as InboundEmailRow[];
 }
 
+export function listInboundEmailsByApplication(applicationId: string): InboundEmailRow[] {
+    const db = getDb();
+    return db
+        .prepare(
+            'SELECT * FROM inbound_emails WHERE suggestedApplicationId = ? ORDER BY receivedAt DESC',
+        )
+        .all(applicationId) as InboundEmailRow[];
+}
+
 export function setInboundReviewStatus(id: string, status: InboundReviewStatus): void {
     getDb()
         .prepare('UPDATE inbound_emails SET reviewStatus = ? WHERE id = ?')

@@ -125,6 +125,8 @@ export interface InboxSyncResult {
     fetched: number;
     stored: number;
     classified: number;
+    autoApplied: number;
+    dropped: number;
     skippedDuplicates: number;
     error?: string;
 }
@@ -273,6 +275,8 @@ const api = {
         sync: (): Promise<InboxSyncResult> => ipcRenderer.invoke('inbox:sync'),
         list: (reviewStatus?: InboundReviewStatus): Promise<InboundEmailDto[]> =>
             ipcRenderer.invoke('inbox:list', reviewStatus),
+        listForApp: (applicationId: string): Promise<InboundEmailDto[]> =>
+            ipcRenderer.invoke('inbox:listForApp', applicationId),
         applySuggestion: (payload: {
             inboundId: string;
             applicationId: string;

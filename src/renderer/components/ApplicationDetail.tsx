@@ -4,6 +4,7 @@ import { DetailFooter } from './application-detail/DetailFooter';
 import { DetailHeader } from './application-detail/DetailHeader';
 import { EmailHistory } from './application-detail/EmailHistory';
 import { FactsGrid } from './application-detail/FactsGrid';
+import { InboundSuggestionBanner } from './application-detail/InboundSuggestionBanner';
 import { NotesBlock } from './application-detail/NotesBlock';
 import { ProfileAndBenefits } from './application-detail/ProfileAndBenefits';
 import { Timeline } from './application-detail/Timeline';
@@ -16,6 +17,7 @@ interface Props {
     onEdit: (app: ApplicationRecord) => void;
     onDelete: (id: string) => void;
     onClose: () => void;
+    onAppChanged?: () => void | Promise<void>;
 }
 
 /**
@@ -23,14 +25,20 @@ interface Props {
  * from the `application-detail/` sub-components. Owns the email dialog state
  * because the footer triggers it and the history has to refresh after send.
  */
-export function ApplicationDetail({ app, onEdit, onDelete, onClose }: Props) {
-    const { events, emails, reloadEmails } = useApplicationRelations(app.id);
+export function ApplicationDetail({ app, onEdit, onDelete, onClose, onAppChanged }: Props) {
+    const { events, emails, inbounds, reloadEmails, reloadInbounds } =
+        useApplicationRelations(app.id);
     const [emailDialogOpen, setEmailDialogOpen] = useState(false);
     const [autoApplyMode, setAutoApplyMode] = useState(false);
 
     const openEmail = (autoApply: boolean) => {
         setAutoApplyMode(autoApply);
         setEmailDialogOpen(true);
+    };
+
+    const handleSuggestionChanged = async () => {
+        reloadInbounds();
+        await onAppChanged?.();
     };
 
     return (
@@ -47,12 +55,18 @@ export function ApplicationDetail({ app, onEdit, onDelete, onClose }: Props) {
         >
             <DetailHeader app={app} onEdit={onEdit} onClose={onClose} />
 
+            <InboundSuggestionBanner
+                inbounds={inbounds}
+                applicationId={app.id}
+                onChanged={handleSuggestionChanged}
+            />
+
             <div style={{ flex: 1, overflow: 'auto', padding: '18px 22px' }}>
                 <FactsGrid app={app} />
                 <WhyBlock app={app} />
                 <ProfileAndBenefits app={app} />
                 <Timeline events={events} createdAt={app.createdAt} />
-                <EmailHistory emails={emails} />
+                <EmailHistory emails={emails} inbounds={inbounds} />
                 <NotesBlock notes={app.notes} />
             </div>
 

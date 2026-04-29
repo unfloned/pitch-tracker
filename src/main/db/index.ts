@@ -1,5 +1,5 @@
 /**
- * DB domain — public API. `initDatabase` has to run once at app startup;
+ * DB domain - public API. `initDatabase` has to run once at app startup;
  * everything else below is the CRUD surface used by IPC handlers and
  * background jobs.
  */
@@ -18,6 +18,7 @@ export {
     insertInboundEmail,
     getInboundEmailByMessageId,
     listInboundEmails,
+    listInboundEmailsByApplication,
     setInboundReviewStatus,
     updateInboundSuggestion,
     getLatestInboundReceivedAt,

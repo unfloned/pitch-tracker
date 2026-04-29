@@ -1,21 +1,35 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { ApplicationEvent, SentEmailRecord } from '../../../preload/index';
+import type {
+    ApplicationEvent,
+    InboundEmailDto,
+    SentEmailRecord,
+} from '../../../preload/index';
 
 /**
- * Loads the status-change events and sent-email history for one application.
- * Re-fetches when the id changes. `reloadEmails` is exposed so that callers
- * can refresh after sending a new email without remounting the detail pane.
+ * Loads status-change events, sent-email history and inbound replies for one
+ * application. Re-fetches when the id changes. `reloadEmails` refreshes both
+ * directions; `reloadInbounds` exists for callers that only triggered a
+ * status change on an inbound suggestion.
  */
 export function useApplicationRelations(appId: string) {
     const [events, setEvents] = useState<ApplicationEvent[]>([]);
     const [emails, setEmails] = useState<SentEmailRecord[]>([]);
+    const [inbounds, setInbounds] = useState<InboundEmailDto[]>([]);
+
+    const reloadInbounds = useCallback(() => {
+        window.api.inbox
+            .listForApp(appId)
+            .then(setInbounds)
+            .catch(() => setInbounds([]));
+    }, [appId]);
 
     const reloadEmails = useCallback(() => {
         window.api.email
             .listForApp(appId)
             .then(setEmails)
             .catch(() => setEmails([]));
-    }, [appId]);
+        reloadInbounds();
+    }, [appId, reloadInbounds]);
 
     useEffect(() => {
         let cancelled = false;
@@ -35,10 +49,18 @@ export function useApplicationRelations(appId: string) {
             .catch(() => {
                 if (!cancelled) setEmails([]);
             });
+        window.api.inbox
+            .listForApp(appId)
+            .then((list) => {
+                if (!cancelled) setInbounds(list);
+            })
+            .catch(() => {
+                if (!cancelled) setInbounds([]);
+            });
         return () => {
             cancelled = true;
         };
     }, [appId]);
 
-    return { events, emails, reloadEmails };
+    return { events, emails, inbounds, reloadEmails, reloadInbounds };
 }

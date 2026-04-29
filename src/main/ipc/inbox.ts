@@ -1,6 +1,10 @@
 import type { IpcMain } from 'electron';
 import type { ApplicationStatus } from '@shared/application';
-import { listInboundEmails, type InboundReviewStatus } from '../db';
+import {
+    listInboundEmails,
+    listInboundEmailsByApplication,
+    type InboundReviewStatus,
+} from '../db';
 import {
     applySuggestion,
     dismissSuggestion,
@@ -15,6 +19,9 @@ export function registerInboxIpc(ipcMain: IpcMain): void {
     ipcMain.handle('inbox:sync', () => syncInbox());
     ipcMain.handle('inbox:list', (_evt, reviewStatus?: InboundReviewStatus) =>
         listInboundEmails(reviewStatus),
+    );
+    ipcMain.handle('inbox:listForApp', (_evt, applicationId: string) =>
+        listInboundEmailsByApplication(applicationId),
     );
     ipcMain.handle(
         'inbox:applySuggestion',
