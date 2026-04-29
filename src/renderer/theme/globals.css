@@ -151,6 +151,12 @@ body {
     100% { transform: translateX(400%); }
 }
 
+/* Soft pulse for "agent running" indicator dots */
+@keyframes agent-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+}
+
 /* Mantine overrides — wrap, don't replace */
 .mantine-AppShell-main {
     background: var(--paper) !important;

@@ -12,6 +12,7 @@ import { FilterBar } from '../components/candidates/FilterBar';
 import { InitialEmpty, NoMatchBanner } from '../components/candidates/EmptyStates';
 import { PageHeader } from '../components/candidates/PageHeader';
 import { useCandidates } from '../components/candidates/useCandidates';
+import { useRunningAgents } from '../components/candidates/useRunningAgents';
 
 interface Props {
     onCandidateImported: (app: ApplicationRecord) => void;
@@ -21,6 +22,7 @@ interface Props {
 export function CandidatesPage({ onCandidateImported, onGoToAgents }: Props) {
     const { t } = useTranslation();
     const ctrl = useCandidates();
+    const runningAgents = useRunningAgents();
     const [drawerCandidate, setDrawerCandidate] = useState<SerializedJobCandidate | null>(null);
 
     const handleCleanupLowScore = () => {
@@ -63,6 +65,7 @@ export function CandidatesPage({ onCandidateImported, onGoToAgents }: Props) {
                 onBucketChange={ctrl.setBucket}
                 filteredCount={ctrl.filtered.length}
                 counts={ctrl.counts}
+                runningAgents={runningAgents}
                 onGoToAgents={onGoToAgents}
                 onCleanupLowScore={handleCleanupLowScore}
             />
