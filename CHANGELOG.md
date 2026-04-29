@@ -2,6 +2,31 @@
 
 All notable changes are documented here. Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## 0.6.0
+
+### Added
+- **Inbound replies in the application detail view**: suggestion banner above the body when an inbound mail is linked to the open application; the email history block lists sent and inbound mails together
+- **Inline status change on the detail pane**: status dropdown above the stage progress applies the change immediately
+- **Auto-fill of "Applied at"**: switching an application from `draft` to `applied` (or any later status) backfills the date when it was empty; switching back to `draft` clears it
+- **Settings sidebar with deep links**: tabbed nav (Allgemein · Profil · E-Mail · Ollama · Backup · Über) and `#hash` URLs survive reloads. Replaces the masonry layout
+- **Ollama model browser** in Settings: per-row Use / Download / Trash-hint actions, grouped by family (Llama, Qwen, Gemma, Mistral, Phi, DeepSeek R1) plus an Andere section for manually-installed names. Free-text custom-pull field at the bottom
+- **Streaming pulls with cancel**: model downloads stream `/api/pull` events; UI shows live percent + bytes per layer with an indeterminate pulse during the manifest phase. Cancel button aborts the stream
+- **Running-agents indicator** on the Vorschläge page: pulsing accent badge near the count when one or more agent searches are in flight, click jumps to the agents page
+- **Parallel scoring per agent search**: configurable 1-4 concurrent LLM requests, slider in the search form with `OLLAMA_NUM_PARALLEL` hint, live `×N` badge on the search row
+- **Stop-button feedback**: clicking Stop on a running search now flips into a `STOPPT…` badge with a disabled spinner button until the abort propagates between scorings
+- **Draggable splitview** on Applications with persisted width, drag handle between list and detail, double-click resets to default
+
+### Changed
+- **Sidebar nav** uses Tabler icons instead of monospaced text tags so the labels are not duplicated
+- **Selection highlight** in the Applications table: dedicated `--row-selected` token plus 3px accent strip on the left edge, distinct in light and dark mode
+- **Application form drawer**: wider (`min(900px, 92vw)`), responsive grid columns in the Core / Contact / Salary sections, RichTextEditor toolbar wraps to the next line on narrow widths instead of forcing a horizontal scrollbar
+- **List loaders only show on first load**: Applications, Agents and Vorschläge pages keep the previous data on screen during background refreshes instead of flashing empty
+- **Internal: typed IPC channel map** so a typo or shape mismatch between main and renderer is now a compile error instead of a silent listener miss
+
+### Fixed
+- Selection highlight on rows was barely distinguishable from hover in dark mode
+- Application form drawer cut off content on smaller windows because the inner grids did not collapse
+
 ## 0.5.0
 
 ### Added

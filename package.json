@@ -1,6 +1,6 @@
 {
     "name": "pitch-tracker",
-    "version": "0.5.0",
+    "version": "0.6.0",
     "description": "Offline desktop app for tracking job applications with local LLM auto-fill, fit scoring, email sending, backup, AI assistant, analytics and background agents across job portals",
     "author": {
         "name": "Florian Chiorean",
