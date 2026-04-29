@@ -1,4 +1,4 @@
-import { Switch, Tooltip } from '@mantine/core';
+import { Loader, Switch, Tooltip } from '@mantine/core';
 import {
     IconPlayerPlay,
     IconPlayerStop,
@@ -56,6 +56,9 @@ function sparklinePoints(seed: string, count = 40): number[] {
 interface Props {
     search: SerializedJobSearch;
     isRunning: boolean;
+    /** True while the user has clicked Stop but the run hasn't actually
+     *  finished yet (in-flight scoring still completing). */
+    isStopping?: boolean;
     onEdit: () => void;
     onDelete: () => void;
     onRun: () => void;
@@ -66,6 +69,7 @@ interface Props {
 export function SearchRow({
     search,
     isRunning,
+    isStopping = false,
     onEdit,
     onDelete,
     onRun,
@@ -176,7 +180,7 @@ export function SearchRow({
                             >
                                 {search.label}
                             </span>
-                            {isRunning && (
+                            {isRunning && !isStopping && (
                                 <span
                                     className="mono"
                                     style={{
@@ -190,6 +194,48 @@ export function SearchRow({
                                 >
                                     RUNNING
                                 </span>
+                            )}
+                            {isStopping && (
+                                <span
+                                    className="mono"
+                                    style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 5,
+                                        fontSize: 9.5,
+                                        fontWeight: 600,
+                                        padding: '1px 5px',
+                                        background: 'var(--rust)',
+                                        color: 'var(--paper)',
+                                        letterSpacing: '0.06em',
+                                    }}
+                                >
+                                    <Loader size={8} color="var(--paper)" />
+                                    {t('candidates.stopping', 'STOPPT…')}
+                                </span>
+                            )}
+                            {search.parallelism > 1 && (
+                                <Tooltip
+                                    label={t('searchForm.parallelismTooltip', {
+                                        count: search.parallelism,
+                                        defaultValue:
+                                            '{{count}} Listings parallel an Ollama',
+                                    })}
+                                >
+                                    <span
+                                        className="mono"
+                                        style={{
+                                            fontSize: 9.5,
+                                            fontWeight: 600,
+                                            padding: '1px 5px',
+                                            border: '1px solid var(--rule-strong)',
+                                            color: 'var(--ink-2)',
+                                            letterSpacing: '0.06em',
+                                        }}
+                                    >
+                                        ×{search.parallelism}
+                                    </span>
+                                </Tooltip>
                             )}
                         </div>
                         <div
@@ -277,14 +323,33 @@ export function SearchRow({
                             />
                         </Tooltip>
                         {isRunning ? (
-                            <GhostBtn onClick={onCancel}>
-                                <IconPlayerStop size={12} />
-                                <span>Stop</span>
+                            <GhostBtn
+                                onClick={onCancel}
+                                disabled={isStopping}
+                                title={
+                                    isStopping
+                                        ? t(
+                                              'candidates.stoppingHint',
+                                              'Wird gestoppt - laufende Scorings müssen erst durch.',
+                                          )
+                                        : undefined
+                                }
+                            >
+                                {isStopping ? (
+                                    <Loader size={10} color="currentColor" />
+                                ) : (
+                                    <IconPlayerStop size={12} />
+                                )}
+                                <span>
+                                    {isStopping
+                                        ? t('candidates.stoppingShort', 'Stoppt…')
+                                        : t('candidates.stopRun', 'Stop')}
+                                </span>
                             </GhostBtn>
                         ) : (
                             <GhostBtn onClick={onRun}>
                                 <IconPlayerPlay size={12} />
-                                <span>Run</span>
+                                <span>{t('candidates.runShort', 'Run')}</span>
                             </GhostBtn>
                         )}
                     </div>

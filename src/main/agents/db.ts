@@ -95,6 +95,9 @@ function runSearchMigrations(db: Database.Database): void {
     if (!set.has('interval')) {
         db.exec("ALTER TABLE job_searches ADD COLUMN interval TEXT NOT NULL DEFAULT '6h'");
     }
+    if (!set.has('parallelism')) {
+        db.exec('ALTER TABLE job_searches ADD COLUMN parallelism INTEGER NOT NULL DEFAULT 1');
+    }
     // Back-fill legacy single-source rows into the new JSON-array column.
     if (set.has('source') && set.has('sources')) {
         const legacy = db

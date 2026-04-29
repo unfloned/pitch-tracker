@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { JobSearchInput, SerializedJobSearch } from '@shared/job-search';
 import { getDb } from './db';
 import type { JobSearchRow } from './types';
-import { nowIso, toSerializedSearch } from './utils';
+import { normalizeParallelism, nowIso, toSerializedSearch } from './utils';
 
 export function listSearches(): SerializedJobSearch[] {
     const rows = getDb()
@@ -30,8 +30,8 @@ export function createSearch(input: JobSearchInput): SerializedJobSearch {
     getDb()
         .prepare(
             `INSERT INTO job_searches
-            (id, label, keywords, sources, locationFilter, remoteOnly, minSalary, enabled, interval, createdAt, updatedAt)
-            VALUES (@id, @label, @keywords, @sources, @locationFilter, @remoteOnly, @minSalary, @enabled, @interval, @createdAt, @updatedAt)`,
+            (id, label, keywords, sources, locationFilter, remoteOnly, minSalary, enabled, interval, parallelism, createdAt, updatedAt)
+            VALUES (@id, @label, @keywords, @sources, @locationFilter, @remoteOnly, @minSalary, @enabled, @interval, @parallelism, @createdAt, @updatedAt)`,
         )
         .run({
             id,
@@ -43,6 +43,7 @@ export function createSearch(input: JobSearchInput): SerializedJobSearch {
             minSalary: input.minSalary ?? 0,
             enabled: input.enabled === false ? 0 : 1,
             interval: input.interval ?? '6h',
+            parallelism: normalizeParallelism(input.parallelism),
             createdAt: now,
             updatedAt: now,
         });
@@ -66,6 +67,7 @@ export function updateSearch(id: string, input: JobSearchInput): SerializedJobSe
         minSalary: input.minSalary ?? existing.minSalary,
         enabled: (input.enabled ?? existing.enabled) ? 1 : 0,
         interval: input.interval ?? existing.interval,
+        parallelism: normalizeParallelism(input.parallelism ?? existing.parallelism),
         updatedAt: nowIso(),
     };
     getDb()
@@ -74,6 +76,7 @@ export function updateSearch(id: string, input: JobSearchInput): SerializedJobSe
                 label = @label, keywords = @keywords, sources = @sources,
                 locationFilter = @locationFilter, remoteOnly = @remoteOnly,
                 minSalary = @minSalary, enabled = @enabled, interval = @interval,
+                parallelism = @parallelism,
                 updatedAt = @updatedAt
             WHERE id = @id`,
         )
@@ -86,7 +89,7 @@ export function deleteSearch(id: string): void {
     getDb().prepare('DELETE FROM job_candidates WHERE searchId = ?').run(id);
 }
 
-/** Updates only the lastRunAt stamp — used by the runner after a search run finishes. */
+/** Updates only the lastRunAt stamp - used by the runner after a search run finishes. */
 export function touchSearchLastRun(id: string, finishedAt: string): void {
     getDb().prepare('UPDATE job_searches SET lastRunAt = ? WHERE id = ?').run(finishedAt, id);
 }

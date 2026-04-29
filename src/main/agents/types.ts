@@ -11,6 +11,7 @@ export interface JobSearchRow {
     minSalary: number;
     enabled: number;
     interval: string;
+    parallelism: number;
     lastRunAt: string | null;
     createdAt: string;
     updatedAt: string;

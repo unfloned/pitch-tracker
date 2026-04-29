@@ -6,6 +6,7 @@ import {
     NumberInput,
     ScrollArea,
     Select,
+    Slider,
     Stack,
     Text,
     TextInput,
@@ -19,6 +20,11 @@ import type {
     ScheduleInterval,
     SerializedJobSearch,
 } from '@shared/job-search';
+import {
+    PARALLELISM_DEFAULT,
+    PARALLELISM_MAX,
+    PARALLELISM_MIN,
+} from '@shared/job-search';
 import { SourceGrid } from '../SourceGrid';
 
 interface FormValues {
@@ -30,6 +36,7 @@ interface FormValues {
     minSalary: number;
     enabled: boolean;
     interval: ScheduleInterval;
+    parallelism: number;
 }
 
 const DEFAULTS: FormValues = {
@@ -41,6 +48,7 @@ const DEFAULTS: FormValues = {
     minSalary: 0,
     enabled: true,
     interval: '6h',
+    parallelism: PARALLELISM_DEFAULT,
 };
 
 interface Props {
@@ -66,6 +74,7 @@ export function SearchFormDrawer({ opened, onClose, initial, onSaved }: Props) {
                 minSalary: initial.minSalary,
                 enabled: initial.enabled,
                 interval: initial.interval,
+                parallelism: initial.parallelism ?? PARALLELISM_DEFAULT,
             });
         } else {
             form.setValues(DEFAULTS);
@@ -150,6 +159,38 @@ export function SearchFormDrawer({ opened, onClose, initial, onSaved }: Props) {
                         min={0}
                         {...form.getInputProps('minSalary')}
                     />
+                    <Stack gap={6}>
+                        <Group justify="space-between" align="baseline">
+                            <Text size="sm" fw={500}>
+                                {t('searchForm.parallelism', 'Parallele Scorings')}
+                            </Text>
+                            <Text size="xs" c="dimmed" className="mono">
+                                {form.values.parallelism}×
+                            </Text>
+                        </Group>
+                        <div style={{ paddingBottom: 18 }}>
+                            <Slider
+                                min={PARALLELISM_MIN}
+                                max={PARALLELISM_MAX}
+                                step={1}
+                                value={form.values.parallelism}
+                                onChange={(v) => form.setFieldValue('parallelism', v)}
+                                marks={[
+                                    { value: 1, label: '1' },
+                                    { value: 2, label: '2' },
+                                    { value: 3, label: '3' },
+                                    { value: 4, label: '4' },
+                                ]}
+                                size="sm"
+                            />
+                        </div>
+                        <Text size="xs" c="dimmed" style={{ lineHeight: 1.45 }}>
+                            {t(
+                                'searchForm.parallelismHint',
+                                '1 = strikt nacheinander (default). >1 = mehrere Listings parallel an Ollama. Realer Speedup nur wenn Ollama mit OLLAMA_NUM_PARALLEL=4 läuft. Bei großen Modellen oder wenig RAM auf 1 lassen.',
+                            )}
+                        </Text>
+                    </Stack>
                     <Checkbox
                         label={t('searchForm.activeLabel')}
                         {...form.getInputProps('enabled', { type: 'checkbox' })}

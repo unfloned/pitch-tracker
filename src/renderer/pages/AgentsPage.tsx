@@ -15,6 +15,7 @@ export function AgentsPage() {
     const { t } = useTranslation();
     const [searches, setSearches] = useState<SerializedJobSearch[]>([]);
     const [runningIds, setRunningIds] = useState<Set<string>>(new Set());
+    const [stoppingIds, setStoppingIds] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
     const [formOpen, setFormOpen] = useState(false);
     const [profileOpen, setProfileOpen] = useState(false);
@@ -44,6 +45,14 @@ export function AgentsPage() {
                 next.delete(p.searchId);
                 return next;
             });
+            // Clear the stopping flag too - the run has actually ended,
+            // whether via normal completion or user cancel.
+            setStoppingIds((prev) => {
+                if (!prev.has(p.searchId)) return prev;
+                const next = new Set(prev);
+                next.delete(p.searchId);
+                return next;
+            });
             refresh();
         });
         return () => {
@@ -65,7 +74,20 @@ export function AgentsPage() {
     };
 
     const cancelRun = async (id: string) => {
-        await window.api.agents.cancelRun(id);
+        // Optimistically flip into "stopping" so the UI gives feedback even
+        // though the abort takes effect only between listings - the in-flight
+        // Ollama call still has to finish before the loop checks the signal.
+        setStoppingIds((prev) => new Set(prev).add(id));
+        try {
+            await window.api.agents.cancelRun(id);
+        } catch {
+            // If the IPC fails, drop the optimistic flag so the user can retry.
+            setStoppingIds((prev) => {
+                const next = new Set(prev);
+                next.delete(id);
+                return next;
+            });
+        }
     };
 
     const grouped = useMemo(() => {
@@ -78,7 +100,7 @@ export function AgentsPage() {
         return { active, paused };
     }, [searches]);
 
-    if (loading) {
+    if (loading && searches.length === 0) {
         return (
             <Center mih={400}>
                 <Loader />
@@ -214,6 +236,7 @@ export function AgentsPage() {
                                         key={s.id}
                                         search={s}
                                         isRunning={runningIds.has(s.id)}
+                                        isStopping={stoppingIds.has(s.id)}
                                         onEdit={() => {
                                             setEditing(s);
                                             setFormOpen(true);

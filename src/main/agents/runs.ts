@@ -8,7 +8,7 @@ import { getSearch, touchSearchLastRun } from './searches';
 import { scoreJobListing } from './scorer';
 import { runScraper } from './scrapers';
 import type { AgentRunRow, RunDeps } from './types';
-import { makeDedupKey, nowIso, parseSources } from './utils';
+import { makeDedupKey, normalizeParallelism, nowIso, parseSources } from './utils';
 
 /** Currently running searches, keyed by search id. Shared state for cancel + scheduler. */
 const activeRuns = new Map<string, AbortController>();
@@ -131,24 +131,23 @@ export async function runSearchNow(
                 phase: 'scoring',
             });
 
-            for (let i = 0; i < listings.length; i++) {
-                if (controller.signal.aborted) {
-                    canceled = true;
-                    break;
-                }
+            // Concurrency pool over the listings. parallelism=1 → strict serial
+            // (matches the historical behavior). >1 → up to N scoring requests
+            // are in flight against Ollama at once. Real speedup needs Ollama
+            // running with `OLLAMA_NUM_PARALLEL` >1; otherwise the requests are
+            // queued internally and we only save the per-call HTTP overhead.
+            const concurrency = normalizeParallelism(search.parallelism);
+            let nextIndex = 0;
+            let processed = 0;
+
+            const processOne = async (i: number) => {
+                if (controller.signal.aborted) return;
 
                 const listing = listings[i];
                 const dedupKey = makeDedupKey(listing.company, listing.title);
                 if (dedupKey && dedupCheck.get(dedupKey)) {
                     scanned += 1;
-                    deps.sendEvent('agents:runProgress', {
-                        searchId,
-                        source,
-                        current: i + 1,
-                        total: listings.length,
-                        phase: 'scoring',
-                    });
-                    continue;
+                    return;
                 }
 
                 const result = await scoreJobListing(
@@ -159,6 +158,8 @@ export async function runSearchNow(
                     profile,
                 );
                 scanned += 1;
+
+                if (controller.signal.aborted) return;
 
                 const info = insert.run({
                     id: randomUUID(),
@@ -211,14 +212,38 @@ export async function runSearchNow(
                         }
                     }
                 }
+            };
 
-                deps.sendEvent('agents:runProgress', {
-                    searchId,
-                    source,
-                    current: i + 1,
-                    total: listings.length,
-                    phase: 'scoring',
-                });
+            // Each worker pulls the next index off the shared counter until
+            // we run out or the run is aborted. Progress is emitted in
+            // completion order, not listing order - fine for a counter.
+            const worker = async () => {
+                while (true) {
+                    if (controller.signal.aborted) return;
+                    const i = nextIndex++;
+                    if (i >= listings.length) return;
+                    try {
+                        await processOne(i);
+                    } catch (err) {
+                        errors.push(`${source}#${i}: ${(err as Error).message}`);
+                    }
+                    processed += 1;
+                    deps.sendEvent('agents:runProgress', {
+                        searchId,
+                        source,
+                        current: processed,
+                        total: listings.length,
+                        phase: 'scoring',
+                    });
+                }
+            };
+
+            const pool = Math.min(concurrency, listings.length);
+            await Promise.all(Array.from({ length: pool }, () => worker()));
+
+            if (controller.signal.aborted) {
+                canceled = true;
+                break;
             }
         }
     } finally {

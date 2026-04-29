@@ -4,8 +4,20 @@ import type {
     SerializedJobCandidate,
     SerializedJobSearch,
 } from '@shared/job-search';
-import { ALL_JOB_SOURCES, INTERVAL_MS } from '@shared/job-search';
+import {
+    ALL_JOB_SOURCES,
+    INTERVAL_MS,
+    PARALLELISM_DEFAULT,
+    PARALLELISM_MAX,
+    PARALLELISM_MIN,
+} from '@shared/job-search';
 import type { JobCandidateRow, JobSearchRow } from './types';
+
+/** Clamp + sanitize a parallelism value coming from input or DB. */
+export function normalizeParallelism(raw: unknown): number {
+    const n = typeof raw === 'number' && Number.isFinite(raw) ? Math.trunc(raw) : PARALLELISM_DEFAULT;
+    return Math.min(PARALLELISM_MAX, Math.max(PARALLELISM_MIN, n));
+}
 
 export function nowIso(): string {
     return new Date().toISOString();
@@ -56,6 +68,7 @@ export function toSerializedSearch(row: JobSearchRow): SerializedJobSearch {
         minSalary: row.minSalary,
         enabled: Boolean(row.enabled),
         interval,
+        parallelism: normalizeParallelism(row.parallelism),
         lastRunAt: row.lastRunAt,
         nextRunAt: computeNextRun(row.lastRunAt, interval),
         createdAt: row.createdAt,

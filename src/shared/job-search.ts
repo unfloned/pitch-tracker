@@ -70,7 +70,15 @@ export interface JobSearchInput {
     minSalary?: number;
     enabled?: boolean;
     interval?: ScheduleInterval;
+    /** How many listings to score in parallel. Default 1 = current strict
+     *  serial behavior. Higher values send N concurrent requests to Ollama.
+     *  Real speedup needs `OLLAMA_NUM_PARALLEL` set on the server. Range 1-4. */
+    parallelism?: number;
 }
+
+export const PARALLELISM_MIN = 1;
+export const PARALLELISM_MAX = 4;
+export const PARALLELISM_DEFAULT = 1;
 
 export type CandidateStatus = 'new' | 'interested' | 'ignored' | 'imported';
 
@@ -97,6 +105,7 @@ export interface SerializedJobSearch {
     minSalary: number;
     enabled: boolean;
     interval: ScheduleInterval;
+    parallelism: number;
     lastRunAt: string | null;
     nextRunAt: string | null;
     createdAt: string;
