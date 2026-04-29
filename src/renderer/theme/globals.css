@@ -145,6 +145,12 @@ body {
     }
 }
 
+/* Indeterminate pull progress: 0%-total events come in before download starts */
+@keyframes pulse-pull {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(400%); }
+}
+
 /* Mantine overrides — wrap, don't replace */
 .mantine-AppShell-main {
     background: var(--paper) !important;

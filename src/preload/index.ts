@@ -121,6 +121,15 @@ export interface InboundEmailDto {
     reviewStatus: InboundReviewStatus;
 }
 
+export interface PullProgressEvent {
+    model: string;
+    status: string;
+    completed: number;
+    total: number;
+    percent: number;
+    done: boolean;
+}
+
 export interface InboxSyncResult {
     fetched: number;
     stored: number;
@@ -160,6 +169,8 @@ const api = {
             ipcRenderer.invoke('llm:start'),
         pullModel: (modelName: string): Promise<{ ok: boolean; message?: string }> =>
             ipcRenderer.invoke('llm:pullModel', modelName),
+        cancelPull: (modelName: string): Promise<{ canceled: boolean }> =>
+            ipcRenderer.invoke('llm:cancelPull', modelName),
         draftEmail: (applicationId: string): Promise<{ subject: string; body: string }> =>
             ipcRenderer.invoke('llm:draftEmail', applicationId),
     },
