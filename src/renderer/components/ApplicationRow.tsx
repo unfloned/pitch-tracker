@@ -68,7 +68,7 @@ export function ApplicationRow({
     const [hovered, setHovered] = useState(false);
 
     const rowBg = selected
-        ? 'var(--paper-2)'
+        ? 'var(--row-selected)'
         : hovered
           ? 'var(--row-hover)'
           : 'var(--card)';
@@ -117,8 +117,9 @@ export function ApplicationRow({
                 height: 40,
                 background: rowBg,
                 borderBottom: '1px solid var(--rule)',
+                boxShadow: selected ? 'inset 3px 0 0 var(--accent)' : 'none',
                 cursor: 'pointer',
-                transition: 'background 80ms',
+                transition: 'background 80ms, box-shadow 80ms',
             }}
         >
             {/* 1: priority strip */}
@@ -253,7 +254,7 @@ export function ApplicationRow({
                         </Tooltip>
                     ) : (
                         <span className="mono" style={{ fontSize: 10, color: 'var(--ink-4)' }}>
-                            —
+                            -
                         </span>
                     )}
                 </div>
@@ -287,7 +288,7 @@ export function ApplicationRow({
                 </div>
             )}
 
-            {/* 10: actions — sticky to right edge so they stay visible on
+            {/* 10: actions - sticky to right edge so they stay visible on
                  horizontal scroll. Background matches row so underlying cells
                  scroll behind cleanly. */}
             <div

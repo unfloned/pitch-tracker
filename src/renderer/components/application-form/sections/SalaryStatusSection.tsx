@@ -12,7 +12,7 @@ export function SalaryStatusSection({ form }: { form: ApplicationForm }) {
             <Accordion.Control>{t('form.salaryAndStatus')}</Accordion.Control>
             <Accordion.Panel>
                 <Stack gap="sm">
-                    <SimpleGrid cols={4} spacing="sm">
+                    <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm">
                         <NumberInput
                             label={t('form.salaryMin')}
                             min={0}
@@ -37,7 +37,7 @@ export function SalaryStatusSection({ form }: { form: ApplicationForm }) {
                             {...form.getInputProps('priority')}
                         />
                     </SimpleGrid>
-                    <SimpleGrid cols={2} spacing="sm">
+                    <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
                         <Stack gap={4}>
                             <Text size="sm" fw={500}>
                                 {t('form.statusLabel')}

@@ -10,7 +10,7 @@ export function CoreSection({ form }: { form: ApplicationForm }) {
             <Accordion.Control>{t('form.companyAndJob')}</Accordion.Control>
             <Accordion.Panel>
                 <Stack gap="sm">
-                    <SimpleGrid cols={2} spacing="sm">
+                    <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
                         <TextInput
                             label={t('form.company')}
                             {...form.getInputProps('companyName')}

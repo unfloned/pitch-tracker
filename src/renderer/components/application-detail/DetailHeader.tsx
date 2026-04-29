@@ -1,8 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import type { ApplicationRecord } from '../../../preload/index';
+import type { ApplicationStatus } from '@shared/application';
 import { initialsFor } from '../../lib/format';
 import { GhostBtn } from '../primitives/GhostBtn';
 import { Kbd } from '../primitives/Kbd';
+import { Label } from '../primitives/Label';
+import { StatusSelector } from '../StatusSelector';
 import { NextStepCallout } from './NextStepCallout';
 import { StageProgress } from './StageProgress';
 import { remoteLabel } from './utils';
@@ -11,6 +14,7 @@ interface Props {
     app: ApplicationRecord;
     onEdit: (app: ApplicationRecord) => void;
     onClose: () => void;
+    onStatusChange?: (id: string, status: ApplicationStatus) => void | Promise<void>;
 }
 
 /**
@@ -18,7 +22,7 @@ interface Props {
  * location line, the stage progress bar, and the next-step callout when the
  * status warrants it.
  */
-export function DetailHeader({ app, onEdit, onClose }: Props) {
+export function DetailHeader({ app, onEdit, onClose, onStatusChange }: Props) {
     const { t } = useTranslation();
     const idShort = (app.id?.slice(0, 8) || '').toUpperCase();
     const initials = initialsFor(app.companyName || app.jobTitle || 'X');
@@ -130,6 +134,23 @@ export function DetailHeader({ app, onEdit, onClose }: Props) {
                     </>
                 )}
             </div>
+
+            {onStatusChange && (
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        marginTop: 14,
+                    }}
+                >
+                    <Label>{t('detail.statusLabel', 'Status')}</Label>
+                    <StatusSelector
+                        value={app.status}
+                        onChange={(s) => onStatusChange(app.id, s)}
+                    />
+                </div>
+            )}
 
             <div style={{ marginTop: 18 }}>
                 <StageProgress status={app.status} />

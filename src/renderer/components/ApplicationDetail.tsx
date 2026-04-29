@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { ApplicationRecord } from '../../preload/index';
+import type { ApplicationStatus } from '@shared/application';
 import { DetailFooter } from './application-detail/DetailFooter';
 import { DetailHeader } from './application-detail/DetailHeader';
 import { EmailHistory } from './application-detail/EmailHistory';
@@ -18,6 +19,7 @@ interface Props {
     onDelete: (id: string) => void;
     onClose: () => void;
     onAppChanged?: () => void | Promise<void>;
+    onStatusChange: (id: string, status: ApplicationStatus) => void | Promise<void>;
 }
 
 /**
@@ -25,7 +27,14 @@ interface Props {
  * from the `application-detail/` sub-components. Owns the email dialog state
  * because the footer triggers it and the history has to refresh after send.
  */
-export function ApplicationDetail({ app, onEdit, onDelete, onClose, onAppChanged }: Props) {
+export function ApplicationDetail({
+    app,
+    onEdit,
+    onDelete,
+    onClose,
+    onAppChanged,
+    onStatusChange,
+}: Props) {
     const { events, emails, inbounds, reloadEmails, reloadInbounds } =
         useApplicationRelations(app.id);
     const [emailDialogOpen, setEmailDialogOpen] = useState(false);
@@ -44,8 +53,8 @@ export function ApplicationDetail({ app, onEdit, onDelete, onClose, onAppChanged
     return (
         <div
             style={{
-                width: 520,
-                minWidth: 520,
+                flex: 1,
+                minWidth: 0,
                 display: 'flex',
                 flexDirection: 'column',
                 background: 'var(--paper)',
@@ -53,7 +62,12 @@ export function ApplicationDetail({ app, onEdit, onDelete, onClose, onAppChanged
                 minHeight: 0,
             }}
         >
-            <DetailHeader app={app} onEdit={onEdit} onClose={onClose} />
+            <DetailHeader
+                app={app}
+                onEdit={onEdit}
+                onClose={onClose}
+                onStatusChange={onStatusChange}
+            />
 
             <InboundSuggestionBanner
                 inbounds={inbounds}

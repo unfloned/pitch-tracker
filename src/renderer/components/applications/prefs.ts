@@ -31,6 +31,7 @@ export interface AppPrefs {
     statusFilter: string | null;
     view: AppView;
     visibleColumns: AppColumnId[];
+    splitWidth: number;
 }
 
 const DEFAULTS: AppPrefs = {
@@ -38,7 +39,11 @@ const DEFAULTS: AppPrefs = {
     statusFilter: null,
     view: 'list',
     visibleColumns: DEFAULT_VISIBLE,
+    splitWidth: 380,
 };
+
+export const SPLIT_MIN = 280;
+export const SPLIT_MAX = 720;
 
 const KEY = 'pitchtracker.applications.prefs.v1';
 
@@ -52,6 +57,7 @@ export function loadAppPrefs(): AppPrefs {
                   APP_COLUMN_DEFS.some((def) => def.id === v),
               ) as AppColumnId[])
             : DEFAULTS.visibleColumns;
+        const sw = typeof parsed.splitWidth === 'number' ? parsed.splitWidth : DEFAULTS.splitWidth;
         return {
             bucket: (parsed.bucket as AppBucket) ?? DEFAULTS.bucket,
             statusFilter:
@@ -60,6 +66,7 @@ export function loadAppPrefs(): AppPrefs {
                     : DEFAULTS.statusFilter,
             view: (parsed.view as AppView) ?? DEFAULTS.view,
             visibleColumns: visible.length > 0 ? visible : DEFAULTS.visibleColumns,
+            splitWidth: Math.min(SPLIT_MAX, Math.max(SPLIT_MIN, sw)),
         };
     } catch {
         return DEFAULTS;

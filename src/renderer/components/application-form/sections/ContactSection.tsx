@@ -8,7 +8,7 @@ export function ContactSection({ form }: { form: ApplicationForm }) {
         <Accordion.Item value="contact">
             <Accordion.Control>{t('form.contact')}</Accordion.Control>
             <Accordion.Panel>
-                <SimpleGrid cols={3} spacing="sm">
+                <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
                     <TextInput
                         label={t('form.contactName')}
                         {...form.getInputProps('contactName')}

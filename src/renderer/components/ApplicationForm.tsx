@@ -95,7 +95,7 @@ export function ApplicationFormModal({
             onClose={onClose}
             withCloseButton={false}
             position="right"
-            size="xl"
+            size="min(900px, 92vw)"
             padding={0}
             scrollAreaComponent={ScrollArea.Autosize}
             overlayProps={{ backgroundOpacity: 0.3, blur: 2 }}
@@ -107,14 +107,23 @@ export function ApplicationFormModal({
                     display: 'flex',
                     flexDirection: 'column',
                     minHeight: 0,
+                    minWidth: 0,
                 },
             }}
         >
             <FormHeader initial={initial} form={form} onClose={onClose} />
 
-            <div style={{ flex: 1, overflow: 'auto', padding: '18px 22px' }}>
-                <form onSubmit={form.onSubmit(submit)}>
-                    <Stack gap="md">
+            <div
+                style={{
+                    flex: 1,
+                    overflowY: 'auto',
+                    overflowX: 'hidden',
+                    padding: '18px 22px',
+                    minWidth: 0,
+                }}
+            >
+                <form onSubmit={form.onSubmit(submit)} style={{ minWidth: 0 }}>
+                    <Stack gap="md" style={{ minWidth: 0 }}>
                         <FitBar form={form} />
                         <UrlExtractor form={form} />
 

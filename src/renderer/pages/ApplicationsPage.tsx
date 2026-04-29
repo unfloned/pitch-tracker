@@ -10,7 +10,7 @@ import {
     TextInput,
 } from '@mantine/core';
 import { IconBriefcase, IconColumns3, IconSearch } from '@tabler/icons-react';
-import { RefObject, useCallback, useEffect, useMemo, useState } from 'react';
+import { RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import type { ApplicationRecord } from '../../preload/index';
@@ -25,6 +25,8 @@ import {
     buildAppRowGrid,
     loadAppPrefs,
     saveAppPrefs,
+    SPLIT_MAX,
+    SPLIT_MIN,
     type AppBucket,
     type AppColumnId,
     type AppView,
@@ -63,6 +65,7 @@ interface Props {
     detailOpen: boolean;
     onCloseDetail: () => void;
     onSavedDetail: () => void;
+    onAppChanged?: () => void | Promise<void>;
 }
 
 export function ApplicationsPage({
@@ -78,6 +81,7 @@ export function ApplicationsPage({
     detailOpen,
     onCloseDetail,
     onSavedDetail,
+    onAppChanged,
 }: Props) {
     const { t } = useTranslation();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -92,6 +96,9 @@ export function ApplicationsPage({
     );
     const [columnPopoverOpen, setColumnPopoverOpen] = useState(false);
     const [selectedId, setSelectedId] = useState<string | null>(urlId);
+    const [splitWidth, setSplitWidth] = useState<number>(initialPrefs.splitWidth);
+    const [dragging, setDragging] = useState(false);
+    const splitContainerRef = useRef<HTMLDivElement | null>(null);
 
     const setStatusFilter = (v: string | null) => {
         setStatusFilterState(v);
@@ -118,6 +125,42 @@ export function ApplicationsPage({
     useEffect(() => {
         if (urlId && urlId !== selectedId) setSelectedId(urlId);
     }, [urlId, selectedId]);
+
+    // Drag handle for the split: tracks pointer globally so the user can
+    // drag past the handle without losing it, persists the width on release.
+    // splitWidth is read via ref to avoid re-attaching the listeners on every
+    // pixel of drag.
+    const splitWidthRef = useRef(splitWidth);
+    splitWidthRef.current = splitWidth;
+    useEffect(() => {
+        if (!dragging) return;
+        const onMove = (e: MouseEvent) => {
+            const container = splitContainerRef.current;
+            if (!container) return;
+            const rect = container.getBoundingClientRect();
+            const next = Math.min(
+                SPLIT_MAX,
+                Math.max(SPLIT_MIN, e.clientX - rect.left),
+            );
+            setSplitWidth(next);
+        };
+        const onUp = () => {
+            setDragging(false);
+            saveAppPrefs({ splitWidth: splitWidthRef.current });
+        };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+        const prevCursor = document.body.style.cursor;
+        const prevSelect = document.body.style.userSelect;
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        return () => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            document.body.style.cursor = prevCursor;
+            document.body.style.userSelect = prevSelect;
+        };
+    }, [dragging]);
 
     const handleSelect = useCallback(
         (row: ApplicationRecord) => {
@@ -189,7 +232,10 @@ export function ApplicationsPage({
         return groups;
     }, [filtered]);
 
-    if (loading) {
+    // Only blank the page on the very first load. Subsequent refreshes (e.g.
+    // after agent imports) keep the previous list visible so it doesn't flash
+    // empty for half a second.
+    if (loading && rows.length === 0) {
         return (
             <Center mih={400}>
                 <Loader />
@@ -379,11 +425,17 @@ export function ApplicationsPage({
                 </GhostBtn>
             </div>
 
-            {/* body — split: list (+ groups) on the left, detail pane on the right */}
-            <div style={{ flex: 1, display: 'flex', minHeight: 0, minWidth: 0 }}>
+            {/* body - split: list (+ groups) on the left, detail pane on the right */}
+            <div
+                ref={splitContainerRef}
+                style={{ flex: 1, display: 'flex', minHeight: 0, minWidth: 0 }}
+            >
                 <div
                     style={{
-                        flex: 1,
+                        flex:
+                            view === 'list' && selectedRow
+                                ? `0 0 ${splitWidth}px`
+                                : 1,
                         minWidth: 0,
                         overflow: 'auto',
                         background: view === 'board' ? 'var(--paper)' : 'var(--card)',
@@ -502,12 +554,40 @@ export function ApplicationsPage({
                 </div>
 
                 {view === 'list' && selectedRow && (
-                    <ApplicationDetail
-                        app={selectedRow}
-                        onEdit={onEdit}
-                        onDelete={onDelete}
-                        onClose={closeDetail}
-                    />
+                    <>
+                        <div
+                            role="separator"
+                            aria-orientation="vertical"
+                            onMouseDown={(e) => {
+                                e.preventDefault();
+                                setDragging(true);
+                            }}
+                            onDoubleClick={() => {
+                                setSplitWidth(380);
+                                saveAppPrefs({ splitWidth: 380 });
+                            }}
+                            title="Ziehen zum Anpassen · Doppelklick = Reset"
+                            style={{
+                                width: 6,
+                                flexShrink: 0,
+                                cursor: 'col-resize',
+                                background: dragging ? 'var(--accent)' : 'transparent',
+                                borderLeft: '1px solid var(--rule-strong)',
+                                borderRight: '1px solid var(--rule)',
+                                transition: 'background 80ms',
+                                position: 'relative',
+                                zIndex: 2,
+                            }}
+                        />
+                        <ApplicationDetail
+                            app={selectedRow}
+                            onEdit={onEdit}
+                            onDelete={onDelete}
+                            onClose={closeDetail}
+                            onAppChanged={onAppChanged}
+                            onStatusChange={onStatusChange}
+                        />
+                    </>
                 )}
             </div>
 

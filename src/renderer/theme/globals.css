@@ -22,6 +22,7 @@
     --rule: #d4d4d8;
     --rule-strong: #a1a1aa;
     --row-hover: #ebebed;
+    --row-selected: #e0e0e4;
     --window-bg: #dcdce0;
 
     /* Signal palette — marigold stays as the one warm signal */
@@ -52,6 +53,7 @@
     --rule: #2a2a2e;
     --rule-strong: #3a3a40;
     --row-hover: #24242a;
+    --row-selected: #2f2f36;
     --window-bg: #0a0a0c;
 }
 
@@ -488,4 +490,11 @@ body {
     background: var(--card) !important;
     border-color: var(--rule) !important;
     color: var(--ink);
+}
+
+/* RichTextEditor toolbar — wrap to next line on narrow drawers instead of
+   forcing a horizontal scrollbar in the parent container. */
+.mantine-RichTextEditor-toolbar {
+    flex-wrap: wrap !important;
+    row-gap: 4px;
 }
