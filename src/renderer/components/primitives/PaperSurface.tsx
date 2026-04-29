@@ -3,7 +3,7 @@ import type { CSSProperties, ReactNode } from 'react';
 interface Props {
     children: ReactNode;
     style?: CSSProperties;
-    /** Add faint ruled lines — journal/notes feel. */
+    /** Add faint ruled lines - journal/notes feel. */
     ruled?: boolean;
 }
 

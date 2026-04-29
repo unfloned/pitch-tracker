@@ -1,7 +1,7 @@
 /**
  * Pure formatting helpers used across row / detail / list views.
  * Everything here takes primitives and returns strings or colors, no React,
- * no i18n, no hooks — so the same helpers work in any component.
+ * no i18n, no hooks - so the same helpers work in any component.
  */
 
 /** "Acme Inc." → "AI". "Google" → "GO". Blank → "?". */
@@ -35,7 +35,7 @@ export function formatDateShort(iso: string | Date | null | undefined): string {
 
 const WEEKDAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
-/** "TUE · 14:00" — time-of-day with short weekday. */
+/** "TUE · 14:00" - time-of-day with short weekday. */
 export function formatEventTime(iso: string | Date): string {
     const d = typeof iso === 'string' ? new Date(iso) : iso;
     const hh = String(d.getHours()).padStart(2, '0');

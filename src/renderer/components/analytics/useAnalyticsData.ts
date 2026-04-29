@@ -68,7 +68,7 @@ interface RemoteShare {
 /**
  * All derived numbers for the Analytics page. Fetches the full event log on
  * mount (keyed off `applications.length` so adding a row refreshes), then
- * memoises everything — weekly buckets, stage-transition medians, source
+ * memoises everything - weekly buckets, stage-transition medians, source
  * attribution, funnel, pipeline, remote mix, match distribution.
  */
 export function useAnalyticsData(applications: ApplicationRecord[]): AnalyticsData {

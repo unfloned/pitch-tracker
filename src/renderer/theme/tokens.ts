@@ -1,5 +1,5 @@
 /**
- * Pitch Tracker — Clean Terminal design tokens.
+ * Pitch Tracker - Clean Terminal design tokens.
  *
  * Philosophy: neutral cool grays, near-black ink, Geist sans everywhere,
  * marigold as the single signal accent. No gradients, no neon.

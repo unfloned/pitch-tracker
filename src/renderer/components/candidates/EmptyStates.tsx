@@ -7,7 +7,7 @@ interface InitialProps {
     onGoToAgents: () => void;
 }
 
-/** No candidates at all yet — agents haven't been configured / run. */
+/** No candidates at all yet - agents haven't been configured / run. */
 export function InitialEmpty({ onGoToAgents }: InitialProps) {
     const { t } = useTranslation();
     return (

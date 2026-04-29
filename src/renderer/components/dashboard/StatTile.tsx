@@ -9,7 +9,7 @@ interface Props {
 }
 
 /**
- * Paper surface with Label + serif numeric value. Click-through optional —
+ * Paper surface with Label + serif numeric value. Click-through optional -
  * the "total" tile uses it to jump into Applications.
  */
 export function StatTile({ label, value, sub, onClick }: Props) {

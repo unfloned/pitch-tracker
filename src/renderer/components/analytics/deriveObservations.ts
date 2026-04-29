@@ -15,7 +15,7 @@ export interface Observation {
 
 /**
  * Produce 3 qualitative takes on the user's history for the "Observations"
- * panel. Deliberately opinionated and grounded in the numbers — not motivational.
+ * panel. Deliberately opinionated and grounded in the numbers - not motivational.
  * Always returns exactly 3 items so the 3-column strip is filled.
  */
 export function deriveObservations(d: Input): Observation[] {
@@ -46,12 +46,12 @@ export function deriveObservations(d: Input): Observation[] {
     } else if (d.interviews > 0) {
         out.push({
             head: `${d.interviews} interview${d.interviews > 1 ? 's' : ''} in motion.`,
-            body: 'You are past the hardest part — the reply. Sort by stage and focus on the ones sitting in "scheduled".',
+            body: 'You are past the hardest part - the reply. Sort by stage and focus on the ones sitting in "scheduled".',
         });
     } else {
         out.push({
             head: 'Volume without replies.',
-            body: `${d.applied} sent, no interviews yet. Tailor the next 5 per role — same time, better signal.`,
+            body: `${d.applied} sent, no interviews yet. Tailor the next 5 per role - same time, better signal.`,
         });
     }
 
@@ -72,7 +72,7 @@ export function deriveObservations(d: Input): Observation[] {
                 d.avgMatch >= 70
                     ? 'You are applying to roles that actually fit. Quality > volume pays off here.'
                     : d.avgMatch >= 50
-                      ? 'Middling fit across the board. Try being choosier — under 60, ask if it is worth the cover letter.'
+                      ? 'Middling fit across the board. Try being choosier - under 60, ask if it is worth the cover letter.'
                       : 'Fit is low on average. Either the scoring is too strict, or you are applying too wide.',
         });
     }

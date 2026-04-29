@@ -1,5 +1,5 @@
 /**
- * Agents domain — public API. Everything the renderer (via IPC) and the main
+ * Agents domain - public API. Everything the renderer (via IPC) and the main
  * process scheduler need lives here as a re-export. Implementation is split
  * into focused files: db init, searches, candidates, runs, scheduler, etc.
  */

@@ -10,7 +10,7 @@ interface Props {
     unit?: string;
 }
 
-/** Single KPI tile used in the top strip — Label, big serif number, colored sub. */
+/** Single KPI tile used in the top strip - Label, big serif number, colored sub. */
 export function KPI({ label, value, sub, tone, unit }: Props) {
     const subBg =
         tone === 'moss'

@@ -16,7 +16,7 @@ interface State {
 
 /**
  * Right-click context menu with paper styling.
- * Returns { onContextMenu, menu } — spread onContextMenu on any element,
+ * Returns { onContextMenu, menu } - spread onContextMenu on any element,
  * render {menu} once at the root of the page (it portals to body).
  */
 export function useContextMenu() {

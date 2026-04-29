@@ -45,7 +45,7 @@ interface RowProps {
 }
 
 /**
- * Key / value row used inside a SettingsSection — label on the left, control
+ * Key / value row used inside a SettingsSection - label on the left, control
  * on the right, optional helper text below the label.
  */
 export function SettingsRow({ label, description, children }: RowProps) {
@@ -94,7 +94,7 @@ interface HintProps {
     children: ReactNode;
 }
 
-/** Inline hint block — border-left accent rule, no icons, no rounded alerts. */
+/** Inline hint block - border-left accent rule, no icons, no rounded alerts. */
 export function SettingsHint({ tone = 'info', children }: HintProps) {
     const borderColor =
         tone === 'ok' ? 'var(--moss)' : tone === 'warn' ? 'var(--rust)' : 'var(--accent)';

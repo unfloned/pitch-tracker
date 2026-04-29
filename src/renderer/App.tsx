@@ -245,7 +245,7 @@ export function App() {
         ['mod+f', () => searchInputRef.current?.focus()],
         ['mod+e', () => doExport()],
         ['mod+,', () => navigate(ROUTES.settings)],
-        // Workspace navigation — matches the sidebar shortcuts.
+        // Workspace navigation - matches the sidebar shortcuts.
         ['mod+1', () => navigate(ROUTES.dashboard)],
         ['mod+2', () => navigate(ROUTES.applications)],
         ['mod+3', () => navigate(ROUTES.candidates)],

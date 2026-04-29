@@ -209,7 +209,7 @@ function createInboundEmailsTable(db: Database.Database): void {
 
 /**
  * Seed-event backfill: every application without events gets one seed entry
- * at its createdAt so analytics has a starting point. Runs once — rows that
+ * at its createdAt so analytics has a starting point. Runs once - rows that
  * already have events are skipped.
  */
 function backfillSeedEvents(db: Database.Database): void {

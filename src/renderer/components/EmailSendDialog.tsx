@@ -14,7 +14,7 @@ interface Props {
     autoMarkApplied?: boolean;
     /** When true: auto-trigger the LLM draft once on open. */
     autoDraft?: boolean;
-    /** Called after send succeeds — parent can refresh, clear selection, etc. */
+    /** Called after send succeeds - parent can refresh, clear selection, etc. */
     onSent?: () => void;
 }
 

@@ -1,6 +1,6 @@
 import type { ApplicationStatus } from '@shared/application';
 
-/** Short English label for a status — rendered in funnel labels and transitions. */
+/** Short English label for a status - rendered in funnel labels and transitions. */
 export function stageShort(s: ApplicationStatus): string {
     return {
         draft: 'Draft',

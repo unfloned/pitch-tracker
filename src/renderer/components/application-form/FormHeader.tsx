@@ -13,7 +13,7 @@ interface Props {
     onClose: () => void;
 }
 
-/** Sticky top of the form drawer — same shape as ApplicationDetail's header. */
+/** Sticky top of the form drawer - same shape as ApplicationDetail's header. */
 export function FormHeader({ initial, form, onClose }: Props) {
     const { t } = useTranslation();
     return (

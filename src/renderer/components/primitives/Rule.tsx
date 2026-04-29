@@ -7,7 +7,7 @@ interface Props {
     style?: CSSProperties;
 }
 
-/** 1px hairline divider. Paper aesthetic — never a shadow. */
+/** 1px hairline divider. Paper aesthetic - never a shadow. */
 export function Rule({ vertical = false, color, strong = false, style }: Props) {
     const resolved = color ?? (strong ? 'var(--rule-strong)' : 'var(--rule)');
     return (

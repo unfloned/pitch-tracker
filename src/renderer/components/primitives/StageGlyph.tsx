@@ -11,7 +11,7 @@ import type { ApplicationStatus } from '@shared/application';
  *   offer_received      → solid dot (moss)
  *   accepted            → solid dot (moss)
  *   rejected            → ×
- *   withdrawn           → —
+ *   withdrawn           → -
  */
 
 type Shape = 'ring' | 'open' | 'solid' | 'half' | 'x' | 'dash';

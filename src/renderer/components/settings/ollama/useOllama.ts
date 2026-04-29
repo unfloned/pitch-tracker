@@ -31,7 +31,7 @@ export interface UseOllama {
     setActive: (model: string) => Promise<void>;
     pull: (model: string) => Promise<void>;
     cancel: (model: string) => Promise<void>;
-    /** Surface the manual `ollama rm` command — Ollama doesn't expose delete via /api yet. */
+    /** Surface the manual `ollama rm` command - Ollama doesn't expose delete via /api yet. */
     remindRemove: (model: string) => void;
 }
 

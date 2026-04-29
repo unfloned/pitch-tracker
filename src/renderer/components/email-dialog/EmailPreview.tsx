@@ -10,7 +10,7 @@ interface Props {
 }
 
 /**
- * Read-only render of the outgoing email — shows envelope (From/To/Subject/
+ * Read-only render of the outgoing email - shows envelope (From/To/Subject/
  * Attachment hint) and the HTML body as the recipient's client would render it.
  */
 export function EmailPreview({

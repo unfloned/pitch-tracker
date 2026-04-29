@@ -10,7 +10,7 @@ interface Props {
 }
 
 /**
- * Paste a job URL and hit "Auto-Fill" — backend scrapes + LLM-extracts the
+ * Paste a job URL and hit "Auto-Fill" - backend scrapes + LLM-extracts the
  * posting and fills structured fields in one shot. Leaves untouched fields
  * at their existing values (spread with `v`).
  */

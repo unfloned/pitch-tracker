@@ -9,7 +9,7 @@ export interface ApplicationEventRow {
     changedAt: Date;
 }
 
-/** Fully-hydrated application row — list fields are parsed, dates are Dates. */
+/** Fully-hydrated application row - list fields are parsed, dates are Dates. */
 export interface ApplicationRow {
     id: string;
     companyName: string;
