@@ -18,7 +18,7 @@ interface Props {
     onEdit: (app: ApplicationRecord) => void;
     onDelete: (id: string) => void;
     onClose: () => void;
-    onAppChanged?: () => void | Promise<void>;
+    onAppChanged: () => void | Promise<void>;
     onStatusChange: (id: string, status: ApplicationStatus) => void | Promise<void>;
 }
 
@@ -47,7 +47,7 @@ export function ApplicationDetail({
 
     const handleSuggestionChanged = async () => {
         reloadInbounds();
-        await onAppChanged?.();
+        await onAppChanged();
     };
 
     return (

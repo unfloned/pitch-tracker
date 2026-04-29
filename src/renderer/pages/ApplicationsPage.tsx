@@ -65,7 +65,7 @@ interface Props {
     detailOpen: boolean;
     onCloseDetail: () => void;
     onSavedDetail: () => void;
-    onAppChanged?: () => void | Promise<void>;
+    onAppChanged: () => void | Promise<void>;
 }
 
 export function ApplicationsPage({
