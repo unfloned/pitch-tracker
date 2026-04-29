@@ -23,6 +23,7 @@ import { ChatPage } from './pages/ChatPage';
 import { InboxPage } from './pages/InboxPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ROUTES } from './routes';
+import { useAppEvents } from './lib/useAppEvents';
 import { applyZoom, loadZoom } from './lib/zoom';
 
 const ONBOARDING_KEY = 'simple-tracker-onboarded';
@@ -58,136 +59,72 @@ export function App() {
         }
     }, []);
 
+    // One-shot bootstrap: zoom, initial data load, onboarding probe.
     useEffect(() => {
         applyZoom(loadZoom());
         refresh();
         refreshCandidateCount();
-
         if (!localStorage.getItem(ONBOARDING_KEY)) {
             window.api.applications.list().then((list) => {
                 if (list.length === 0) setOnboardingOpen(true);
             });
         }
+    }, [refresh, refreshCandidateCount]);
 
-        const unsubNav = window.api.on('navigate', (target: string) => {
-            if (target === 'new') {
-                navigate(ROUTES.applications);
-                setEditing(null);
-                setQuickAddUrl(null);
-                setFormOpen(true);
-            }
-        });
-        const unsubQuickAdd = window.api.on(
-            'navigate:quickAdd',
-            (payload: { url: string }) => {
-                navigate(ROUTES.applications);
-                setEditing(null);
-                setQuickAddUrl(payload.url || '');
-                setFormOpen(true);
-            },
-        );
-        const unsubOpenApplication = window.api.on(
-            'navigate:openApplication',
-            (id: string) => {
-                navigate(`${ROUTES.applications}?id=${encodeURIComponent(id)}`);
-            },
-        );
-        const unsubAutoImport = window.api.on(
-            'agents:autoImported',
-            (payload: { candidate: string; score: number }) => {
-                notifications.show({
-                    color: 'teal',
-                    title: t('notifications.autoImportedTitle', { score: payload.score }),
-                    message: payload.candidate,
-                });
-                refresh();
-                refreshCandidateCount();
-            },
-        );
-        const unsubCandidateAdded = window.api.on('agents:candidateAdded', () => {
-            refreshCandidateCount();
-        });
-        const unsubFinished = window.api.on(
-            'agents:runFinished',
-            (payload: { scanned: number; added: number; canceled: boolean; errors: string[] }) => {
-                refreshCandidateCount();
-                if (payload.canceled) {
-                    notifications.show({ color: 'gray', message: t('notifications.agentRunCanceled') });
-                    return;
-                }
-                const stats = t('notifications.agentRunFinishedStats', {
-                    scanned: payload.scanned,
-                    added: payload.added,
-                });
-                notifications.show({
-                    color: payload.added > 0 ? 'green' : 'gray',
-                    title: t('notifications.agentRunFinishedTitle'),
-                    message:
-                        payload.errors.length > 0
-                            ? t('notifications.agentRunFinishedWithErrors', {
-                                  stats,
-                                  errors: payload.errors.join('; '),
-                              })
-                            : stats,
-                    autoClose: 6000,
-                });
-            },
-        );
-        const unsubFollowUp = window.api.on(
-            'reminders:followUp',
-            (payload: { applicationId: string; companyName: string; daysSinceApplied: number }) => {
-                notifications.show({
-                    color: 'yellow',
-                    title: t('notifications.followUpTitle', { days: payload.daysSinceApplied }),
-                    message: payload.companyName,
-                    autoClose: 10000,
-                });
-            },
-        );
-        return () => {
-            unsubNav();
-            unsubQuickAdd();
-            unsubOpenApplication();
-            unsubAutoImport();
-            unsubCandidateAdded();
-            unsubFinished();
-            unsubFollowUp();
-        };
-    }, [refresh, refreshCandidateCount, t, navigate]);
-
-    // Reset candidates badge when visiting the page
+    // Reset the candidates badge when the user actually visits the page.
     useEffect(() => {
         if (location.pathname === ROUTES.candidates) {
             setNewCandidatesCount(0);
         }
     }, [location.pathname]);
 
-    const openNew = () => {
+    const openNew = useCallback(() => {
         navigate(ROUTES.applications);
         setEditing(null);
         setQuickAddUrl(null);
         setFormOpen(true);
-    };
+    }, [navigate]);
 
-    const openEdit = (row: ApplicationRecord) => {
+    const openEdit = useCallback((row: ApplicationRecord) => {
         setEditing(row);
         setQuickAddUrl(null);
         setFormOpen(true);
-    };
+    }, []);
 
-    // Navigate to the Applications split-view with a preselected row instead of
-    // opening the edit drawer directly. Keeps inbox-clicks visually consistent
-    // with clicking a row on the Applications page.
-    const openDetail = (row: ApplicationRecord) => {
-        navigate(`${ROUTES.applications}?id=${encodeURIComponent(row.id)}`);
-    };
+    /** Navigate to the Applications split-view with a preselected row instead
+     *  of opening the edit drawer directly. Keeps inbox-clicks visually
+     *  consistent with clicking a row on the Applications page. */
+    const openDetail = useCallback(
+        (row: ApplicationRecord) => {
+            navigate(`${ROUTES.applications}?id=${encodeURIComponent(row.id)}`);
+        },
+        [navigate],
+    );
 
-    const openQuickAdd = () => {
-        navigate(ROUTES.applications);
-        setEditing(null);
-        setQuickAddUrl('');
-        setFormOpen(true);
-    };
+    const openQuickAdd = useCallback(
+        (url: string = '') => {
+            navigate(ROUTES.applications);
+            setEditing(null);
+            setQuickAddUrl(url);
+            setFormOpen(true);
+        },
+        [navigate],
+    );
+
+    const openApplicationById = useCallback(
+        (id: string) => {
+            navigate(`${ROUTES.applications}?id=${encodeURIComponent(id)}`);
+        },
+        [navigate],
+    );
+
+    useAppEvents({
+        refresh,
+        refreshCandidateCount,
+        openNew,
+        openQuickAdd,
+        openApplication: openApplicationById,
+    });
 
     const doExport = async () => {
         const labels = {
@@ -347,7 +284,7 @@ export function App() {
                         </GhostBtn>
                     </Tooltip>
                     <Tooltip label={t('toolbar.quickAdd')}>
-                        <GhostBtn onClick={openQuickAdd}>
+                        <GhostBtn onClick={() => openQuickAdd()}>
                             <span>⚡ Quick add</span>
                         </GhostBtn>
                     </Tooltip>
@@ -453,6 +390,7 @@ export function App() {
                                 detailOpen={formOpen}
                                 onCloseDetail={closeForm}
                                 onSavedDetail={savedDetail}
+                                onAppChanged={refresh}
                             />
                         }
                     />
