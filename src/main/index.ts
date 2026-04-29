@@ -1,9 +1,11 @@
 import { app, BrowserWindow, clipboard, globalShortcut, Menu, nativeImage, Tray } from 'electron';
 import { join } from 'node:path';
+import type { RendererEventMap } from '@shared/events';
 import { initDatabase } from './db';
 import { registerIpcHandlers } from './ipc';
 import { initAutoUpdater } from './updater';
 import { initAgentsDatabase, listCandidates, startAgentScheduler } from './agents';
+import { startInboxAutoSync } from './inbox';
 import { startFollowUpReminder } from './reminders';
 
 let mainWindow: BrowserWindow | null = null;
@@ -56,9 +58,18 @@ function createWindow(): void {
     }
 }
 
+function sendToMain<K extends keyof RendererEventMap>(
+    channel: K,
+    payload: RendererEventMap[K],
+): void {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send(channel, payload);
+    }
+}
+
 function openNewEntry(): void {
     createWindow();
-    mainWindow?.webContents.send('navigate', 'new');
+    sendToMain('navigate', 'new');
 }
 
 function openQuickAddFromClipboard(): void {
@@ -67,7 +78,7 @@ function openQuickAddFromClipboard(): void {
     createWindow();
     mainWindow?.show();
     mainWindow?.focus();
-    mainWindow?.webContents.send('navigate:quickAdd', { url });
+    sendToMain('navigate:quickAdd', { url });
 }
 
 function refreshTrayMenu(): void {
@@ -131,6 +142,7 @@ app.whenReady().then(() => {
     createTray();
     initAutoUpdater(() => mainWindow);
     startAgentScheduler(() => mainWindow);
+    startInboxAutoSync(() => mainWindow);
     startFollowUpReminder(() => mainWindow);
 
     globalShortcut.register('CommandOrControl+Shift+N', openQuickAddFromClipboard);
@@ -145,5 +157,5 @@ app.on('will-quit', () => {
 });
 
 app.on('window-all-closed', () => {
-    // Bleibt im Tray offen — kein Quit bei Window-Close
+    // Bleibt im Tray offen - kein Quit bei Window-Close
 });

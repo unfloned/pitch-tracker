@@ -1,5 +1,6 @@
 import { BrowserWindow, Notification } from 'electron';
 import { listApplications } from './db';
+import { createEventSender } from './ipc/events';
 
 const REMINDER_STORAGE_KEY = 'followUpReminderSeen';
 const FOLLOW_UP_DAYS = 7;
@@ -7,6 +8,8 @@ const FOLLOW_UP_DAYS = 7;
 const seen = new Set<string>();
 
 export function startFollowUpReminder(getWindow: () => BrowserWindow | null): void {
+    const send = createEventSender(getWindow);
+
     const check = () => {
         const now = Date.now();
         const cutoff = now - FOLLOW_UP_DAYS * 24 * 60 * 60 * 1000;
@@ -31,20 +34,17 @@ export function startFollowUpReminder(getWindow: () => BrowserWindow | null): vo
                     if (win && !win.isDestroyed()) {
                         win.show();
                         win.focus();
-                        win.webContents.send('navigate:openApplication', app.id);
+                        send('navigate:openApplication', app.id);
                     }
                 });
                 notification.show();
             }
 
-            const win = getWindow();
-            if (win && !win.isDestroyed()) {
-                win.webContents.send('reminders:followUp', {
-                    applicationId: app.id,
-                    companyName: app.companyName,
-                    daysSinceApplied: Math.floor((now - appliedMs) / (24 * 60 * 60 * 1000)),
-                });
-            }
+            send('reminders:followUp', {
+                applicationId: app.id,
+                companyName: app.companyName,
+                daysSinceApplied: Math.floor((now - appliedMs) / (24 * 60 * 60 * 1000)),
+            });
         }
     };
 

@@ -1,9 +1,11 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import pkg from 'electron-updater';
+import { createEventSender } from './ipc/events';
 
 const { autoUpdater } = pkg;
 
 export function initAutoUpdater(getWindow: () => BrowserWindow | null): void {
+    const send = createEventSender(getWindow);
     ipcMain.handle('updater:currentVersion', async () => ({ version: app.getVersion() }));
 
     ipcMain.handle('updater:checkNow', async () => {
@@ -33,7 +35,7 @@ export function initAutoUpdater(getWindow: () => BrowserWindow | null): void {
     autoUpdater.autoInstallOnAppQuit = true;
 
     autoUpdater.on('update-available', (info) => {
-        sendToWindow(getWindow(), 'updater:available', {
+        send('updater:available', {
             version: info.version,
             releaseDate: info.releaseDate,
             notes: typeof info.releaseNotes === 'string' ? info.releaseNotes : '',
@@ -41,11 +43,11 @@ export function initAutoUpdater(getWindow: () => BrowserWindow | null): void {
     });
 
     autoUpdater.on('update-downloaded', (info) => {
-        sendToWindow(getWindow(), 'updater:downloaded', { version: info.version });
+        send('updater:downloaded', { version: info.version });
     });
 
     autoUpdater.on('error', (err) => {
-        sendToWindow(getWindow(), 'updater:error', { message: err.message });
+        send('updater:error', { message: err.message });
     });
 
     autoUpdater.checkForUpdates().catch(() => { });
@@ -56,9 +58,4 @@ export function initAutoUpdater(getWindow: () => BrowserWindow | null): void {
         },
         4 * 60 * 60 * 1000,
     );
-}
-
-function sendToWindow(win: BrowserWindow | null, channel: string, payload: unknown): void {
-    if (!win || win.isDestroyed()) return;
-    win.webContents.send(channel, payload);
 }

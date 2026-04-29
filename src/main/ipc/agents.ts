@@ -22,16 +22,14 @@ import {
     updateSearch,
 } from '../agents';
 import { createApplication } from '../db';
+import { createEventSender } from './events';
 import { serializeApplication } from './serializers';
 
 export function registerAgentsIpc(
     ipcMain: IpcMain,
     getWindow: () => BrowserWindow | null,
 ): void {
-    const sendEvent = (channel: string, payload: unknown) => {
-        const win = getWindow();
-        if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
-    };
+    const sendEvent = createEventSender(getWindow);
 
     ipcMain.handle('agents:listSearches', () => listSearches());
     ipcMain.handle('agents:createSearch', (_evt, input) => createSearch(input));

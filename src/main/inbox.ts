@@ -1,5 +1,7 @@
+import type { BrowserWindow } from 'electron';
 import { classifyInboundEmail } from './email-classifier';
 import { fetchRecentUnread } from './imap';
+import { createEventSender } from './ipc/events';
 import {
     getInboundEmailByMessageId,
     getLatestInboundReceivedAt,
@@ -10,6 +12,7 @@ import {
     updateInboundSuggestion,
     type InboundReviewStatus,
 } from './db';
+import { getUserProfile } from './profile';
 import type { ApplicationStatus } from '@shared/application';
 import { serializeApplication } from './ipc/serializers';
 import type { ApplicationRecord } from '../preload/index';
@@ -18,20 +21,27 @@ export interface SyncResult {
     fetched: number;
     stored: number;
     classified: number;
+    autoApplied: number;
+    dropped: number;
     skippedDuplicates: number;
     error?: string;
 }
 
+const AUTO_APPLY_CONFIDENCE = 80;
+
 /**
- * Fetch → dedupe by messageId → classify with local LLM → store with
- * suggestion. Never modifies the mail on the server (no mark-as-seen), never
- * auto-applies status changes - the user reviews each suggestion in the UI.
+ * Fetch → dedupe by messageId → classify with local LLM. Mails without a
+ * matched application are dropped silently. Mails with a clear status and
+ * confidence >= 80 are auto-applied (status + note prepended). The rest is
+ * stored as pending for in-drawer review.
  */
 export async function syncInbox(): Promise<SyncResult> {
     const result: SyncResult = {
         fetched: 0,
         stored: 0,
         classified: 0,
+        autoApplied: 0,
+        dropped: 0,
         skippedDuplicates: 0,
     };
     try {
@@ -53,8 +63,6 @@ export async function syncInbox(): Promise<SyncResult> {
                 result.skippedDuplicates += 1;
                 continue;
             }
-            // Classify via LLM. If Ollama is down or rejects, we still store
-            // the message so the user can triage manually.
             const classification = await classifyInboundEmail(
                 {
                     subject: msg.subject,
@@ -64,6 +72,12 @@ export async function syncInbox(): Promise<SyncResult> {
                 },
                 apps,
             );
+
+            if (!classification.applicationId) {
+                result.dropped += 1;
+                continue;
+            }
+
             const inserted = insertInboundEmail({
                 messageId: msg.messageId,
                 fromAddress: msg.fromAddress,
@@ -76,17 +90,27 @@ export async function syncInbox(): Promise<SyncResult> {
                 suggestedNote: classification.note,
                 confidence: classification.confidence,
             });
-            if (inserted) {
-                result.stored += 1;
-                if (
-                    classification.status &&
-                    classification.status !== 'other' &&
-                    classification.applicationId
-                ) {
-                    result.classified += 1;
-                }
-            } else {
+
+            if (!inserted) {
                 result.skippedDuplicates += 1;
+                continue;
+            }
+            result.stored += 1;
+
+            const status = classification.status;
+            if (status === null || status === 'other') {
+                continue;
+            }
+            if (classification.confidence >= AUTO_APPLY_CONFIDENCE) {
+                applySuggestion(
+                    inserted.id,
+                    classification.applicationId,
+                    status,
+                    classification.note,
+                );
+                result.autoApplied += 1;
+            } else {
+                result.classified += 1;
             }
         }
     } catch (err) {
@@ -151,4 +175,28 @@ export function setReviewStatus(
     status: InboundReviewStatus,
 ): void {
     setInboundReviewStatus(inboundId, status);
+}
+
+const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000;
+const AUTO_SYNC_INITIAL_DELAY_MS = 30 * 1000;
+
+/**
+ * Polls the configured IMAP inbox in the background. Skips when IMAP is not
+ * configured. Pushes `inbox:autoSynced` to the renderer on every successful
+ * tick so the dashboard can refresh and toast on autoApplied > 0.
+ */
+export function startInboxAutoSync(getWindow: () => BrowserWindow | null): void {
+    const send = createEventSender(getWindow);
+    const tick = async () => {
+        const p = getUserProfile();
+        if (!p.imapHost || !p.imapUser || !p.imapPassword) return;
+        try {
+            const result = await syncInbox();
+            send('inbox:autoSynced', result);
+        } catch {
+            // next tick will retry
+        }
+    };
+    setTimeout(tick, AUTO_SYNC_INITIAL_DELAY_MS);
+    setInterval(tick, AUTO_SYNC_INTERVAL_MS);
 }

@@ -1,5 +1,6 @@
 import type { BrowserWindow } from 'electron';
 import { INTERVAL_MS } from '@shared/job-search';
+import { createEventSender } from '../ipc/events';
 import { isSearchRunning, runSearchNow } from './runs';
 import { listSearches } from './searches';
 
@@ -9,10 +10,7 @@ import { listSearches } from './searches';
  * searches and any run that's already in flight.
  */
 export function startAgentScheduler(getWindow: () => BrowserWindow | null): void {
-    const send = (channel: string, payload: unknown) => {
-        const win = getWindow();
-        if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
-    };
+    const send = createEventSender(getWindow);
 
     const runDue = async () => {
         const now = Date.now();

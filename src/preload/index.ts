@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 import type {
     ApplicationInput,
     ApplicationStatus,
@@ -7,6 +7,7 @@ import type {
     Priority,
     RemoteType,
 } from '@shared/application';
+import type { RendererEventMap } from '@shared/events';
 import type {
     AgentRunRecord,
     JobSearchInput,
@@ -14,6 +15,8 @@ import type {
     SerializedJobSearch,
     CandidateStatus,
 } from '@shared/job-search';
+
+export type { RendererEventMap } from '@shared/events';
 
 export interface ApplicationRecord {
     id: string;
@@ -121,14 +124,7 @@ export interface InboundEmailDto {
     reviewStatus: InboundReviewStatus;
 }
 
-export interface PullProgressEvent {
-    model: string;
-    status: string;
-    completed: number;
-    total: number;
-    percent: number;
-    done: boolean;
-}
+export type { LlmPullProgressPayload as PullProgressEvent } from '@shared/events';
 
 export interface InboxSyncResult {
     fetched: number;
@@ -308,10 +304,16 @@ const api = {
         ): Promise<void> =>
             ipcRenderer.invoke('inbox:setReviewStatus', inboundId, status),
     },
-    on: (channel: string, handler: (...args: any[]) => void) => {
-        const wrapped = (_evt: unknown, ...args: any[]) => handler(...args);
+    on: <K extends keyof RendererEventMap>(
+        channel: K,
+        handler: (payload: RendererEventMap[K]) => void,
+    ): (() => void) => {
+        const wrapped = (_evt: IpcRendererEvent, payload: RendererEventMap[K]) =>
+            handler(payload);
         ipcRenderer.on(channel, wrapped);
-        return () => ipcRenderer.removeListener(channel, wrapped);
+        return () => {
+            ipcRenderer.removeListener(channel, wrapped);
+        };
     },
 };
 

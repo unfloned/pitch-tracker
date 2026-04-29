@@ -1,13 +1,9 @@
+import type { LlmPullProgressPayload } from '@shared/events';
 import { getLlmConfig } from './config';
 
-export interface PullProgress {
-    model: string;
-    status: string;
-    completed: number;
-    total: number;
-    percent: number;
-    done: boolean;
-}
+/** Same shape as the renderer event payload, kept here to avoid main->shared
+ *  import in client modules that only need the local type. */
+export type PullProgress = LlmPullProgressPayload;
 
 const activePulls = new Map<string, AbortController>();
 

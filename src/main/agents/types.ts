@@ -1,3 +1,4 @@
+import type { EventSender } from '../ipc/events';
 import type { ScoringProfile } from './scorer';
 
 /** job_searches row shape as returned from better-sqlite3. */
@@ -62,5 +63,5 @@ export interface AgentConfig extends ScoringProfile {
 
 /** External callbacks passed into runSearchNow so runs can emit progress. */
 export interface RunDeps {
-    sendEvent: (channel: string, payload: unknown) => void;
+    sendEvent: EventSender;
 }
