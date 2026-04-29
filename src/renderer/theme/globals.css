@@ -112,24 +112,6 @@ body {
     font-feature-settings: 'tnum';
 }
 
-/* Settings masonry — auto-balanced 2 columns when there's room, else 1 */
-.settings-masonry {
-    columns: 1;
-    column-gap: 40px;
-}
-
-.settings-masonry > * {
-    break-inside: avoid;
-    -webkit-column-break-inside: avoid;
-    page-break-inside: avoid;
-}
-
-@media (min-width: 960px) {
-    .settings-masonry {
-        columns: 2;
-    }
-}
-
 /* Scrollbar — thin, paper-toned */
 ::-webkit-scrollbar {
     width: 10px;

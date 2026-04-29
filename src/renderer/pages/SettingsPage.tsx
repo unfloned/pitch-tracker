@@ -1,177 +1,87 @@
-import { SegmentedControl, Slider, useMantineColorScheme } from '@mantine/core';
-import { notifications } from '@mantine/notifications';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { setLanguage, type Language } from '../i18n';
-import { applyZoom, loadZoom, saveZoom, ZOOM_MAX, ZOOM_MIN } from '../lib/zoom';
+import { AboutCard } from '../components/settings/AboutCard';
+import { AppearanceCard } from '../components/settings/AppearanceCard';
 import { BackupCard } from '../components/settings/BackupCard';
 import { EmailStyleCard } from '../components/settings/EmailStyleCard';
 import { OllamaCard } from '../components/settings/OllamaCard';
 import { ProfileCard } from '../components/settings/ProfileCard';
-import { SettingsRow, SettingsSection } from '../components/settings/SettingsSection';
-import { GhostBtn } from '../components/primitives/GhostBtn';
+import { SettingsLayout, type SettingsTab } from '../components/settings/SettingsLayout';
 
 export function SettingsPage() {
-    const { t, i18n } = useTranslation();
-    const { colorScheme, setColorScheme } = useMantineColorScheme();
+    const { t } = useTranslation();
     const [version, setVersion] = useState<string>('');
-    const [zoom, setZoom] = useState(() => loadZoom());
 
     useEffect(() => {
         window.api.updater.currentVersion().then((v) => setVersion(v.version));
     }, []);
 
-    const updateZoomContent = (v: number) => {
-        const next = { ...zoom, content: v };
-        setZoom(next);
-        applyZoom(next);
-        saveZoom(next);
-    };
-    const updateZoomSidebar = (v: number) => {
-        const next = { ...zoom, sidebar: v };
-        setZoom(next);
-        applyZoom(next);
-        saveZoom(next);
-    };
+    const tabs: SettingsTab[] = [
+        {
+            id: 'general',
+            label: t('settings.nav.general', 'Allgemein'),
+            hint: t('settings.nav.generalHint', 'Theme · Sprache · Zoom'),
+            render: () => <AppearanceCard />,
+        },
+        {
+            id: 'profile',
+            label: t('settings.nav.profile', 'Profil'),
+            hint: t('settings.nav.profileHint', 'Name · E-Mail · CV'),
+            render: () => <ProfileCard />,
+        },
+        {
+            id: 'email',
+            label: t('settings.nav.email', 'E-Mail-Stil'),
+            hint: t('settings.nav.emailHint', 'Anschreiben-Vorlage'),
+            render: () => <EmailStyleCard />,
+        },
+        {
+            id: 'ollama',
+            label: t('settings.nav.ollama', 'Ollama'),
+            hint: t('settings.nav.ollamaHint', 'Lokales LLM · Modelle'),
+            render: () => <OllamaCard />,
+        },
+        {
+            id: 'backup',
+            label: t('settings.nav.backup', 'Backup'),
+            hint: t('settings.nav.backupHint', 'Export · Import'),
+            render: () => <BackupCard />,
+        },
+        {
+            id: 'about',
+            label: t('settings.nav.about', 'Über'),
+            hint: t('settings.nav.aboutHint', 'Version · Updates'),
+            render: () => <AboutCard />,
+        },
+    ];
 
-    const checkUpdate = async () => {
-        const result = await window.api.updater.checkNow();
-        if (result.dev) {
-            notifications.show({ message: t('settings.devSkip') });
-        } else if (result.updateAvailable) {
-            notifications.show({
-                color: 'blue',
-                message: t('settings.updateAvailableNotify', { version: result.remoteVersion }),
-            });
-        } else {
-            notifications.show({
-                message: t('settings.onLatest', { version: result.currentVersion }),
-            });
-        }
-    };
-
-    return (
-        <div style={{ maxWidth: 1200 }}>
-            {/* page header — full width above the grid */}
-            <div style={{ marginBottom: 32 }}>
-                <h1
-                    className="serif"
-                    style={{
-                        fontSize: 32,
-                        margin: 0,
-                        color: 'var(--ink)',
-                        letterSpacing: '-0.02em',
-                        lineHeight: 1.1,
-                    }}
-                >
-                    {t('settings.title')}
-                </h1>
-                <div
-                    className="mono"
-                    style={{
-                        fontSize: 11,
-                        color: 'var(--ink-3)',
-                        marginTop: 6,
-                        letterSpacing: '0.04em',
-                    }}
-                >
-                    v{version || '0.0.0'} · local · {t('settings.subtitle', 'configure once, forget')}
-                </div>
-            </div>
-
-            {/* sections masonry — CSS columns balance section heights automatically */}
-            <div className="settings-masonry">
-                <SettingsSection label={t('settings.appearance')}>
-                    <SettingsRow label={t('settings.theme')}>
-                        <SegmentedControl
-                            value={colorScheme}
-                            onChange={(v) => setColorScheme(v as 'light' | 'dark' | 'auto')}
-                            data={[
-                                { value: 'light', label: t('settings.themeLight') },
-                                { value: 'dark', label: t('settings.themeDark') },
-                                { value: 'auto', label: t('settings.themeSystem') },
-                            ]}
-                            size="xs"
-                        />
-                    </SettingsRow>
-                    <SettingsRow label={t('settings.language')}>
-                        <SegmentedControl
-                            value={i18n.language.startsWith('de') ? 'de' : 'en'}
-                            onChange={(v) => setLanguage(v as Language)}
-                            data={[
-                                { value: 'de', label: t('settings.languageGerman') },
-                                { value: 'en', label: t('settings.languageEnglish') },
-                            ]}
-                            size="xs"
-                        />
-                    </SettingsRow>
-                    <SettingsRow
-                        label={t('settings.zoomContent')}
-                        description={t('settings.zoomContentHint')}
-                    >
-                        <div style={{ width: 200 }}>
-                            <Slider
-                                min={ZOOM_MIN}
-                                max={ZOOM_MAX}
-                                step={0.05}
-                                value={zoom.content}
-                                onChange={updateZoomContent}
-                                label={(v) => `${Math.round(v * 100)} %`}
-                                marks={[
-                                    { value: 1, label: '100 %' },
-                                ]}
-                                size="sm"
-                            />
-                        </div>
-                    </SettingsRow>
-                    <SettingsRow
-                        label={t('settings.zoomSidebar')}
-                        description={t('settings.zoomSidebarHint')}
-                    >
-                        <div style={{ width: 200 }}>
-                            <Slider
-                                min={ZOOM_MIN}
-                                max={ZOOM_MAX}
-                                step={0.05}
-                                value={zoom.sidebar}
-                                onChange={updateZoomSidebar}
-                                label={(v) => `${Math.round(v * 100)} %`}
-                                marks={[
-                                    { value: 1, label: '100 %' },
-                                ]}
-                                size="sm"
-                            />
-                        </div>
-                    </SettingsRow>
-                </SettingsSection>
-
-                <ProfileCard />
-
-                <EmailStyleCard />
-
-                <BackupCard />
-
-                <OllamaCard />
-
-                <SettingsSection label={t('settings.app')}>
-                    <SettingsRow label={t('settings.version')}>
-                        <span
-                            className="mono tnum"
-                            style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 500 }}
-                        >
-                            {version || '...'}
-                        </span>
-                    </SettingsRow>
-                    <SettingsRow
-                        label={t('settings.checkForUpdate')}
-                        description={t('settings.checkForUpdateHint', 'Fetch latest release manifest')}
-                    >
-                        <GhostBtn onClick={checkUpdate}>
-                            <span>{t('settings.checkForUpdate')}</span>
-                        </GhostBtn>
-                    </SettingsRow>
-                </SettingsSection>
+    const header = (
+        <div style={{ marginBottom: 32 }}>
+            <h1
+                className="serif"
+                style={{
+                    fontSize: 32,
+                    margin: 0,
+                    color: 'var(--ink)',
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1.1,
+                }}
+            >
+                {t('settings.title')}
+            </h1>
+            <div
+                className="mono"
+                style={{
+                    fontSize: 11,
+                    color: 'var(--ink-3)',
+                    marginTop: 6,
+                    letterSpacing: '0.04em',
+                }}
+            >
+                v{version || '0.0.0'} · local · {t('settings.subtitle', 'configure once, forget')}
             </div>
         </div>
     );
+
+    return <SettingsLayout tabs={tabs} defaultTab="general" header={header} />;
 }
