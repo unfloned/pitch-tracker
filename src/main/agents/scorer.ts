@@ -1,5 +1,5 @@
 import { getLlmConfig } from '../llm';
-import { inlineEscape, UNTRUSTED_NOTICE, wrapUntrusted } from '../llm/sanitize';
+import { inlineEscape, newNonce, untrustedNotice, wrapUntrusted } from '../llm/sanitize';
 
 export interface ScoringProfile {
     stackKeywords: string;
@@ -24,7 +24,7 @@ export interface ScoreResult {
     redFlags: string[];
 }
 
-const SCORING_PROMPT = (profile: ScoringProfile) => {
+const SCORING_PROMPT = (profile: ScoringProfile, nonce: string) => {
     const excludesBlock = profile.excludes.length
         ? profile.excludes.map((e, i) => `  ${i + 1}. ${e}`).join('\n')
         : '  (keine zusätzlichen)';
@@ -34,7 +34,7 @@ const SCORING_PROMPT = (profile: ScoringProfile) => {
 
     return `Du bist ein KRITISCHER Job-Matcher. Du analysierst Stellenanzeigen gegen das Profil eines deutschen Senior-TypeScript-Entwicklers. Sei skeptisch. Erfinde NICHTS. Zitiere nur was im Text der Stelle wirklich steht.
 
-${UNTRUSTED_NOTICE}
+${untrustedNotice(nonce)}
 
 # PROFIL
 - Stack (gewünscht): ${profile.stackKeywords || 'TypeScript, Next.js, React, Node.js, React Native, Postgres'}
@@ -122,12 +122,13 @@ export async function scoreJobListing(
     profile: ScoringProfile,
 ): Promise<ScoreResult> {
     const { ollamaUrl, ollamaModel } = getLlmConfig();
+    const nonce = newNonce();
     const text = `Titel: ${inlineEscape(title)}
 Firma: ${inlineEscape(company)}
 Ort: ${inlineEscape(location)}
 
 Beschreibung:
-${wrapUntrusted('job_summary', summary)}`;
+${wrapUntrusted('job_summary', summary, nonce)}`;
 
     const empty = (score: number, reason: string): ScoreResult => ({
         score,
@@ -143,7 +144,7 @@ ${wrapUntrusted('job_summary', summary)}`;
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 model: ollamaModel,
-                prompt: SCORING_PROMPT(profile) + text,
+                prompt: SCORING_PROMPT(profile, nonce) + text,
                 stream: false,
                 format: 'json',
                 options: {

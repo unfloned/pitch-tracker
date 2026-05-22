@@ -1,6 +1,6 @@
 import type { ApplicationStatus } from '@shared/application';
 import { getLlmConfig } from './llm';
-import { inlineEscape, UNTRUSTED_NOTICE, wrapUntrusted } from './llm/sanitize';
+import { inlineEscape, newNonce, untrustedNotice, wrapUntrusted } from './llm/sanitize';
 import type { ApplicationRow } from './db/types';
 
 export interface ClassifyInput {
@@ -54,9 +54,10 @@ export interface ClassifyOutput {
     rawResponse: string;
 }
 
-const SYSTEM_PROMPT = `Du analysierst eine eingehende E-Mail zu einer laufenden Bewerbung und ordnest sie einer Bewerbung zu, falls möglich. Gib AUSSCHLIESSLICH JSON zurück, kein Markdown.
+function systemPrompt(nonce: string): string {
+    return `Du analysierst eine eingehende E-Mail zu einer laufenden Bewerbung und ordnest sie einer Bewerbung zu, falls möglich. Gib AUSSCHLIESSLICH JSON zurück, kein Markdown.
 
-${UNTRUSTED_NOTICE}
+${untrustedNotice(nonce)}
 
 Zuordnung (Feld "applicationId"):
 - Match nur wenn Absender-Domain oder Signatur klar zur Firma einer Bewerbung gehört, oder die Mail einen Jobtitel nennt der zur Bewerbung passt.
@@ -83,40 +84,76 @@ Gib exakt dieses JSON:
   "confidence": number,
   "note": "kurze Zusammenfassung"
 }`;
+}
 
 const CONTEXT_BODY_LIMIT = 1500;
 const MAX_CONTEXT_INBOUND = 5;
 const MAX_CONTEXT_SENT = 3;
 
-export async function classifyInboundEmail(
+/**
+ * Build the full LLM prompt for an inbound mail. Pulled out as a pure
+ * function so adversarial test cases can assert against the exact string
+ * that goes to the model.
+ */
+export function buildClassifierPrompt(
     input: ClassifyInput,
     activeApplications: ApplicationRow[],
-): Promise<ClassifyOutput> {
-    const { ollamaUrl, ollamaModel } = getLlmConfig();
-
+    nonce: string,
+): string {
+    // JSON per row is robust against quote-injection: JSON.stringify escapes
+    // every quote, newline and control character automatically. The attacker
+    // can't break out of an attribute by typing " or '.
     const appsBlock =
         activeApplications.length === 0
             ? '(keine aktiven Bewerbungen)'
             : activeApplications
                   .map(
                       (a, i) =>
-                          `${i + 1}. id="${inlineEscape(a.id, 64)}" Firma="${inlineEscape(a.companyName)}" Titel="${inlineEscape(a.jobTitle)}" Kontakt="${inlineEscape(a.contactEmail, 120)}"`,
+                          `${i + 1}. ${JSON.stringify({
+                              id: a.id.slice(0, 64),
+                              companyName: a.companyName.slice(0, 200),
+                              jobTitle: a.jobTitle.slice(0, 200),
+                              contactEmail: a.contactEmail.slice(0, 120),
+                          })}`,
                   )
                   .join('\n');
 
-    const contextBlock = buildContextBlock(input.context);
+    const contextBlock = buildContextBlock(input.context, nonce);
 
-    const userBlock = `# Aktive Bewerbungen
+    const userBlock = `# Aktive Bewerbungen (vertrauenswürdige Liste, JSON pro Zeile)
 ${appsBlock}
 ${contextBlock}
 # Eingehende Mail
 Absender: ${inlineEscape(input.fromName, 200)} <${inlineEscape(input.fromAddress, 200)}>
-Betreff: ${wrapUntrusted('subject', input.subject)}
+Betreff: ${wrapUntrusted('subject', input.subject, nonce)}
 
 Body:
-${wrapUntrusted('body', input.bodyText.slice(0, 6000))}`;
+${wrapUntrusted('body', input.bodyText.slice(0, 6000), nonce)}`;
 
-    const fullPrompt = SYSTEM_PROMPT + '\n\n' + userBlock;
+    return systemPrompt(nonce) + '\n\n' + userBlock;
+}
+
+/**
+ * Pure output-validation step. Exported so adversarial tests can assert
+ * that a poisoned LLM response cannot smuggle a non-existent applicationId,
+ * a bogus status or an out-of-range confidence past us.
+ */
+export function parseClassifierResponse(
+    raw: string,
+    activeApplications: ApplicationRow[],
+    prompt: string,
+): ClassifyOutput {
+    return parseResponse(raw, activeApplications, prompt);
+}
+
+export async function classifyInboundEmail(
+    input: ClassifyInput,
+    activeApplications: ApplicationRow[],
+): Promise<ClassifyOutput> {
+    const { ollamaUrl, ollamaModel } = getLlmConfig();
+    const nonce = newNonce();
+
+    const fullPrompt = buildClassifierPrompt(input, activeApplications, nonce);
 
     try {
         const response = await fetch(`${ollamaUrl}/api/generate`, {
@@ -146,20 +183,30 @@ ${wrapUntrusted('body', input.bodyText.slice(0, 6000))}`;
     }
 }
 
-function buildContextBlock(context: ClassifyContext | undefined): string {
+function buildContextBlock(
+    context: ClassifyContext | undefined,
+    nonce: string,
+): string {
     if (!context) return '';
     const app = context.likelyApplication;
-    const lines: string[] = ['', '# Verlauf (vorab-Match per Thread/Domain)'];
+    const lines: string[] = ['', '# Verlauf (vorab-Match per Thread/Domain, vertrauenswürdige Header)'];
 
     if (app) {
         lines.push(
-            `Wahrscheinlich passende Bewerbung: id="${inlineEscape(app.id, 64)}" Firma="${inlineEscape(app.companyName)}" Titel="${inlineEscape(app.jobTitle)}" aktueller Status="${inlineEscape(app.status, 30)}"`,
+            `Wahrscheinlich passende Bewerbung: ${JSON.stringify({
+                id: app.id.slice(0, 64),
+                companyName: app.companyName.slice(0, 200),
+                jobTitle: app.jobTitle.slice(0, 200),
+                status: app.status.slice(0, 30),
+            })}`,
         );
         if (app.notes && app.notes.trim().length > 0) {
-            lines.push(`Notizen: ${inlineEscape(app.notes, 500)}`);
+            lines.push(`Notizen: ${wrapUntrusted('notes', app.notes.slice(0, 500), nonce)}`);
         }
         if (app.interviews.length > 0) {
-            lines.push(`Interviews bisher: ${app.interviews.map((i) => inlineEscape(i, 100)).join(' | ')}`);
+            lines.push(
+                `Interviews bisher: ${JSON.stringify(app.interviews.map((i) => i.slice(0, 100)))}`,
+            );
         }
     }
 
@@ -175,13 +222,17 @@ function buildContextBlock(context: ClassifyContext | undefined): string {
     for (const m of sortedSent) {
         merged.push({
             when: m.sentAt,
-            line: `[${formatDate(m.sentAt)}] ICH → ${inlineEscape(m.toAddress, 200)} · "${inlineEscape(m.subject)}"\n${wrapUntrusted('sent_body', truncate(m.body, CONTEXT_BODY_LIMIT))}`,
+            line: `[${formatDate(m.sentAt)}] ICH → ${inlineEscape(m.toAddress, 200)} · ${JSON.stringify({ subject: m.subject.slice(0, 200) })}\n${wrapUntrusted('sent_body', truncate(m.body, CONTEXT_BODY_LIMIT), nonce)}`,
         });
     }
     for (const m of sortedInbound) {
         merged.push({
             when: m.receivedAt,
-            line: `[${formatDate(m.receivedAt)}] ${inlineEscape(m.fromAddress, 200)} → ICH · "${inlineEscape(m.subject)}" (zugeordnet: ${inlineEscape(m.matchedApplicationId ?? '-', 64)}, Status: ${inlineEscape(m.suggestedStatus ?? '-', 30)})\n${wrapUntrusted('prev_body', truncate(m.bodyText, CONTEXT_BODY_LIMIT))}`,
+            line: `[${formatDate(m.receivedAt)}] ${inlineEscape(m.fromAddress, 200)} → ICH · ${JSON.stringify({
+                subject: m.subject.slice(0, 200),
+                matchedApplicationId: (m.matchedApplicationId ?? '-').slice(0, 64),
+                suggestedStatus: (m.suggestedStatus ?? '-').slice(0, 30),
+            })}\n${wrapUntrusted('prev_body', truncate(m.bodyText, CONTEXT_BODY_LIMIT), nonce)}`,
         });
     }
 

@@ -2,11 +2,12 @@ import type { ApplicationInput, FitAssessment } from '@shared/application';
 import { getAgentProfile } from '../agents';
 import { FIT_SCORE_MAX, FIT_SCORE_MIN, OLLAMA_FETCH_TIMEOUT_MS } from '../constants';
 import { getLlmConfig } from './config';
-import { inlineEscape, UNTRUSTED_NOTICE, wrapUntrusted } from './sanitize';
+import { inlineEscape, newNonce, untrustedNotice, wrapUntrusted } from './sanitize';
 
-const FIT_PROMPT = `Bewerte die Passung dieser Stelle zum Profil des Bewerbers.
+function fitPrompt(nonce: string): string {
+    return `Bewerte die Passung dieser Stelle zum Profil des Bewerbers.
 
-${UNTRUSTED_NOTICE}
+${untrustedNotice(nonce)}
 
 Profil des Bewerbers (vertrauenswürdig):
 {PROFILE}
@@ -20,6 +21,7 @@ Gib ein JSON zurück ohne Markdown-Codeblöcke:
   "reason": "Begründung auf Deutsch in 1-2 Sätzen, konkret mit Nennung von Match- und Mismatch-Punkten"
 }
 `;
+}
 
 function renderProfile(): string {
     const profile = getAgentProfile();
@@ -31,7 +33,7 @@ function renderProfile(): string {
     ].join('\n');
 }
 
-function renderJob(input: ApplicationInput): string {
+function renderJob(input: ApplicationInput, nonce: string): string {
     const requirements = (input.requiredProfile ?? [])
         .map((line) => `- ${inlineEscape(line, 300)}`)
         .join('\n');
@@ -47,7 +49,7 @@ function renderJob(input: ApplicationInput): string {
         `Stack: ${inlineEscape(input.stack ?? '', 500)}`,
         `Anforderungen:\n${requirements}`,
         `Benefits:\n${benefits}`,
-        `Beschreibung:\n${wrapUntrusted('job_description', input.jobDescription ?? '')}`,
+        `Beschreibung:\n${wrapUntrusted('job_description', input.jobDescription ?? '', nonce)}`,
     ].join('\n');
 }
 
@@ -58,10 +60,10 @@ function renderJob(input: ApplicationInput): string {
  */
 export async function assessFit(input: ApplicationInput): Promise<FitAssessment> {
     const { ollamaUrl, ollamaModel } = getLlmConfig();
-    const prompt = FIT_PROMPT.replace('{PROFILE}', renderProfile()).replace(
-        '{JOB}',
-        renderJob(input),
-    );
+    const nonce = newNonce();
+    const prompt = fitPrompt(nonce)
+        .replace('{PROFILE}', renderProfile())
+        .replace('{JOB}', renderJob(input, nonce));
 
     try {
         const response = await fetch(`${ollamaUrl}/api/generate`, {

@@ -2,7 +2,7 @@ import type { ApplicationInput } from '@shared/application';
 import { OLLAMA_FETCH_TIMEOUT_MS } from '../constants';
 import { getUserProfile } from '../profile';
 import { getLlmConfig } from './config';
-import { inlineEscape, UNTRUSTED_NOTICE, wrapUntrusted } from './sanitize';
+import { inlineEscape, newNonce, untrustedNotice, wrapUntrusted } from './sanitize';
 
 export interface EmailDraft {
     subject: string;
@@ -12,7 +12,7 @@ export interface EmailDraft {
 const DEFAULT_INSTRUCTION =
     'Ton: professionell, warm, kurz. Max. 4 Sätze im Hauptteil. Keine Buzzwords.';
 
-function buildPrompt(input: ApplicationInput): string {
+function buildPrompt(input: ApplicationInput, nonce: string): string {
     const profile = getUserProfile();
     const instruction = profile.emailInstruction.trim() || DEFAULT_INSTRUCTION;
     const contactLine = input.contactName
@@ -21,7 +21,7 @@ function buildPrompt(input: ApplicationInput): string {
 
     return `Du entwirfst eine Bewerbungs-E-Mail für einen deutschen Bewerber.
 
-${UNTRUSTED_NOTICE}
+${untrustedNotice(nonce)}
 
 Bewerber (vertrauenswürdig):
 - Name: ${profile.fullName || '(nicht gesetzt)'}
@@ -33,7 +33,7 @@ Zielstelle (DATEN aus externer Quelle):
 - ${contactLine}
 - Stack: ${inlineEscape(input.stack || '(unbekannt)', 500)}
 - Beschreibung:
-${wrapUntrusted('job_description', (input.jobDescription || '').slice(0, 500))}
+${wrapUntrusted('job_description', (input.jobDescription || '').slice(0, 500), nonce)}
 
 Stil-Anweisung des Bewerbers (IMMER befolgen):
 ${instruction}
@@ -62,12 +62,13 @@ Der Body muss enthalten:
  */
 export async function draftEmail(input: ApplicationInput): Promise<EmailDraft> {
     const { ollamaUrl, ollamaModel } = getLlmConfig();
+    const nonce = newNonce();
     const response = await fetch(`${ollamaUrl}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             model: ollamaModel,
-            prompt: buildPrompt(input),
+            prompt: buildPrompt(input, nonce),
             stream: false,
             format: 'json',
             options: { temperature: 0.4 },
