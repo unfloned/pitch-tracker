@@ -1,7 +1,6 @@
 import type { ApplicationStatus } from '@shared/application';
-import { getLlmConfig } from './llm';
-import { inlineEscape, newNonce, untrustedNotice, wrapUntrusted } from './llm/sanitize';
-import type { ApplicationRow } from './db/types';
+import { inlineEscape, untrustedNotice, wrapUntrusted } from '../llm/sanitize';
+import type { ApplicationRow } from '../db/types';
 
 export interface ClassifyInput {
     subject: string;
@@ -43,16 +42,9 @@ export interface ClassifyContext {
     previousSent: ContextSentMessage[];
 }
 
-export interface ClassifyOutput {
-    applicationId: string | null;
-    status: ApplicationStatus | 'other' | null;
-    confidence: number;
-    note: string;
-    /** The full prompt that was sent to the LLM. Used for debug display. */
-    prompt: string;
-    /** The raw LLM response (before JSON parsing). Used for debug display. */
-    rawResponse: string;
-}
+const CONTEXT_BODY_LIMIT = 1500;
+const MAX_CONTEXT_INBOUND = 5;
+const MAX_CONTEXT_SENT = 3;
 
 function systemPrompt(nonce: string): string {
     return `Du analysierst eine eingehende E-Mail zu einer laufenden Bewerbung und ordnest sie einer Bewerbung zu, falls möglich. Gib AUSSCHLIESSLICH JSON zurück, kein Markdown.
@@ -85,10 +77,6 @@ Gib exakt dieses JSON:
   "note": "kurze Zusammenfassung"
 }`;
 }
-
-const CONTEXT_BODY_LIMIT = 1500;
-const MAX_CONTEXT_INBOUND = 5;
-const MAX_CONTEXT_SENT = 3;
 
 /**
  * Build the full LLM prompt for an inbound mail. Pulled out as a pure
@@ -131,56 +119,6 @@ Body:
 ${wrapUntrusted('body', input.bodyText.slice(0, 6000), nonce)}`;
 
     return systemPrompt(nonce) + '\n\n' + userBlock;
-}
-
-/**
- * Pure output-validation step. Exported so adversarial tests can assert
- * that a poisoned LLM response cannot smuggle a non-existent applicationId,
- * a bogus status or an out-of-range confidence past us.
- */
-export function parseClassifierResponse(
-    raw: string,
-    activeApplications: ApplicationRow[],
-    prompt: string,
-): ClassifyOutput {
-    return parseResponse(raw, activeApplications, prompt);
-}
-
-export async function classifyInboundEmail(
-    input: ClassifyInput,
-    activeApplications: ApplicationRow[],
-): Promise<ClassifyOutput> {
-    const { ollamaUrl, ollamaModel } = getLlmConfig();
-    const nonce = newNonce();
-
-    const fullPrompt = buildClassifierPrompt(input, activeApplications, nonce);
-
-    try {
-        const response = await fetch(`${ollamaUrl}/api/generate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                model: ollamaModel,
-                prompt: fullPrompt,
-                stream: false,
-                format: 'json',
-                options: {
-                    temperature: 0.1,
-                    num_predict: 512,
-                    num_ctx: 8192,
-                },
-            }),
-            signal: AbortSignal.timeout(60000),
-        });
-        if (!response.ok) {
-            return empty(`LLM-Fehler HTTP ${response.status}`, fullPrompt, '');
-        }
-        const json = (await response.json()) as { response: string };
-        const raw = json.response.trim();
-        return parseResponse(raw, activeApplications, fullPrompt);
-    } catch (err) {
-        return empty(`Ollama offline: ${(err as Error).message}`, fullPrompt, '');
-    }
 }
 
 function buildContextBlock(
@@ -258,54 +196,4 @@ function formatDate(iso: string): string {
 function truncate(text: string, limit: number): string {
     if (text.length <= limit) return text;
     return text.slice(0, limit) + '… [gekürzt]';
-}
-
-function parseResponse(
-    raw: string,
-    apps: ApplicationRow[],
-    prompt: string,
-): ClassifyOutput {
-    try {
-        const parsed = JSON.parse(raw) as Partial<ClassifyOutput>;
-        const validIds = new Set(apps.map((a) => a.id));
-        const applicationId =
-            typeof parsed.applicationId === 'string' && validIds.has(parsed.applicationId)
-                ? parsed.applicationId
-                : null;
-        const status = normalizeStatus(parsed.status);
-        const confidence = Math.max(
-            0,
-            Math.min(100, Number(parsed.confidence) || 0),
-        );
-        const note = typeof parsed.note === 'string' ? parsed.note.slice(0, 280) : '';
-        return { applicationId, status, confidence, note, prompt, rawResponse: raw };
-    } catch {
-        return empty('LLM-Antwort ungültig', prompt, raw);
-    }
-}
-
-function normalizeStatus(s: unknown): ApplicationStatus | 'other' | null {
-    if (typeof s !== 'string') return null;
-    const allowed: (ApplicationStatus | 'other')[] = [
-        'rejected',
-        'interview_scheduled',
-        'interviewed',
-        'offer_received',
-        'in_review',
-        'other',
-    ];
-    return (allowed as string[]).includes(s)
-        ? (s as ApplicationStatus | 'other')
-        : null;
-}
-
-function empty(note: string, prompt: string, rawResponse: string): ClassifyOutput {
-    return {
-        applicationId: null,
-        status: null,
-        confidence: 0,
-        note,
-        prompt,
-        rawResponse,
-    };
 }

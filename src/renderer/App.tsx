@@ -10,7 +10,7 @@ import { STATUS_ORDER } from '@shared/application';
 import type { ApplicationRecord } from '../preload/index';
 import { Sidebar } from './components/Sidebar';
 import { CommandPalette, spotlight } from './components/CommandPalette';
-import { ApplicationFormModal } from './components/ApplicationForm';
+import { ApplicationFormModal } from './components/applications/ApplicationForm';
 import { UpdateBanner } from './components/UpdateBanner';
 import { StatusFooter } from './components/StatusFooter';
 import { OnboardingWizard } from './components/OnboardingWizard';

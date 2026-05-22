@@ -1,17 +1,17 @@
 import { useState } from 'react';
-import type { ApplicationRecord } from '../../preload/index';
+import type { ApplicationRecord } from '../../../preload/index';
 import type { ApplicationStatus } from '@shared/application';
-import { DetailFooter } from './application-detail/DetailFooter';
-import { DetailHeader } from './application-detail/DetailHeader';
-import { EmailHistory } from './application-detail/EmailHistory';
-import { FactsGrid } from './application-detail/FactsGrid';
-import { InboundSuggestionBanner } from './application-detail/InboundSuggestionBanner';
-import { NotesBlock } from './application-detail/NotesBlock';
-import { ProfileAndBenefits } from './application-detail/ProfileAndBenefits';
-import { Timeline } from './application-detail/Timeline';
-import { WhyBlock } from './application-detail/WhyBlock';
-import { useApplicationRelations } from './application-detail/useApplicationRelations';
-import { EmailSendDialog } from './EmailSendDialog';
+import { DetailFooter } from '../application-detail/DetailFooter';
+import { DetailHeader } from '../application-detail/DetailHeader';
+import { EmailHistory } from '../application-detail/EmailHistory';
+import { FactsGrid } from '../application-detail/FactsGrid';
+import { InboundSuggestionBanner } from '../application-detail/InboundSuggestionBanner';
+import { NotesBlock } from '../application-detail/NotesBlock';
+import { ProfileAndBenefits } from '../application-detail/ProfileAndBenefits';
+import { Timeline } from '../application-detail/Timeline';
+import { WhyBlock } from '../application-detail/WhyBlock';
+import { useApplicationRelations } from '../application-detail/useApplicationRelations';
+import { EmailSendDialog } from '../EmailSendDialog';
 
 interface Props {
     app: ApplicationRecord;

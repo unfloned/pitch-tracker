@@ -16,6 +16,3 @@ export { cancelPull, pullModel } from './pull';
 
 export { extractJobData } from './extraction';
 export { assessFit } from './fit';
-
-export type { EmailDraft } from './email-draft';
-export { draftEmail } from './email-draft';

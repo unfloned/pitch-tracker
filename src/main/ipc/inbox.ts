@@ -8,11 +8,12 @@ import {
 import {
     applySuggestion,
     dismissSuggestion,
+    listMailboxes,
     reassignSuggestion,
     setReviewStatus,
     syncInbox,
+    testImapConnection,
 } from '../inbox';
-import { listMailboxes, testImapConnection } from '../imap';
 import { createEventSender } from './events';
 
 export function registerInboxIpc(

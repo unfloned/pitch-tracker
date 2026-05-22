@@ -5,13 +5,13 @@ import {
     assessFit,
     cancelPull,
     checkLlmStatus,
-    draftEmail,
     extractJobData,
     getLlmConfig,
     pullModel,
     setLlmConfig,
     startOllama,
 } from '../llm';
+import { draftEmail } from '../mail';
 
 export function registerLlmIpc(ipcMain: IpcMain): void {
     ipcMain.handle('llm:extract', async (_evt, url: string) => extractJobData(url));

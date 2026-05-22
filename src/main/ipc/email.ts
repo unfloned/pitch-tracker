@@ -1,6 +1,6 @@
 import type { IpcMain } from 'electron';
 import { listEmailsForApplication } from '../db';
-import { sendEmail, verifySmtp, type EmailSendRequest } from '../email';
+import { sendEmail, verifySmtp, type EmailSendRequest } from '../mail';
 
 export function registerEmailIpc(ipcMain: IpcMain): void {
     ipcMain.handle('email:verify', () => verifySmtp());

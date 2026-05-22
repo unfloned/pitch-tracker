@@ -16,10 +16,10 @@ import { useSearchParams } from 'react-router-dom';
 import type { ApplicationRecord } from '../../preload/index';
 import type { ApplicationStatus } from '@shared/application';
 import { STATUS_ORDER } from '@shared/application';
-import { ApplicationRow } from '../components/ApplicationRow';
-import { ApplicationBoard } from '../components/ApplicationBoard';
-import { ApplicationDetail } from '../components/ApplicationDetail';
-import { ApplicationFormModal } from '../components/ApplicationForm';
+import { ApplicationRow } from '../components/applications/ApplicationRow';
+import { ApplicationBoard } from '../components/applications/ApplicationBoard';
+import { ApplicationDetail } from '../components/applications/ApplicationDetail';
+import { ApplicationFormModal } from '../components/applications/ApplicationForm';
 import {
     APP_COLUMN_DEFS,
     buildAppRowGrid,

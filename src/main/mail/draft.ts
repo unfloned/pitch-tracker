@@ -1,8 +1,8 @@
 import type { ApplicationInput } from '@shared/application';
 import { OLLAMA_FETCH_TIMEOUT_MS } from '../constants';
+import { getLlmConfig } from '../llm';
+import { inlineEscape, newNonce, untrustedNotice, wrapUntrusted } from '../llm/sanitize';
 import { getUserProfile } from '../profile';
-import { getLlmConfig } from './config';
-import { inlineEscape, newNonce, untrustedNotice, wrapUntrusted } from './sanitize';
 
 export interface EmailDraft {
     subject: string;

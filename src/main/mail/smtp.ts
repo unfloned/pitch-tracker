@@ -1,8 +1,8 @@
 import nodemailer from 'nodemailer';
 import { existsSync, statSync } from 'node:fs';
 import { basename } from 'node:path';
-import { getUserProfile } from './profile';
-import { logSentEmail } from './db';
+import { getUserProfile } from '../profile';
+import { logSentEmail } from '../db';
 
 export interface EmailSendRequest {
     to: string;

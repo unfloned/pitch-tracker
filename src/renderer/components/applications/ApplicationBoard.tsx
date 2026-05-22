@@ -2,7 +2,7 @@ import { Badge, Box, Group, ScrollArea, Stack, Text } from '@mantine/core';
 import { IconTargetArrow } from '@tabler/icons-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { ApplicationRecord } from '../../preload/index';
+import type { ApplicationRecord } from '../../../preload/index';
 import type { ApplicationStatus } from '@shared/application';
 import { STATUS_ORDER } from '@shared/application';
 

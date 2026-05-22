@@ -6,7 +6,7 @@ import {
 } from '@tabler/icons-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { ApplicationRecord } from '../../preload/index';
+import type { ApplicationRecord } from '../../../preload/index';
 import type { ApplicationStatus } from '@shared/application';
 import {
     formatSalary,
@@ -14,15 +14,15 @@ import {
     initialsFor,
     priorityColor,
     shortSource,
-} from '../lib/format';
+} from '../../lib/format';
 import {
     APP_COLUMN_DEFS,
     buildAppRowGrid,
     type AppColumnId,
-} from './applications/prefs';
-import { StatusSelector } from './StatusSelector';
-import { MatchScore } from './primitives/MatchScore';
-import { useContextMenu } from './primitives/ContextMenu';
+} from './prefs';
+import { StatusSelector } from '../StatusSelector';
+import { MatchScore } from '../primitives/MatchScore';
+import { useContextMenu } from '../primitives/ContextMenu';
 
 function formatLocation(row: ApplicationRecord, t: (k: string) => string): string {
     const loc = row.location?.trim();
