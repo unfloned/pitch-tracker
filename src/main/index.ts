@@ -5,7 +5,7 @@ import { initDatabase } from './db';
 import { registerIpcHandlers } from './ipc';
 import { initAutoUpdater } from './updater';
 import { initAgentsDatabase, listCandidates, startAgentScheduler } from './agents';
-import { startInboxAutoSync } from './inbox';
+import { startInboxIdleWatcher } from './inbox';
 import { startFollowUpReminder } from './reminders';
 
 let mainWindow: BrowserWindow | null = null;
@@ -142,7 +142,7 @@ app.whenReady().then(() => {
     createTray();
     initAutoUpdater(() => mainWindow);
     startAgentScheduler(() => mainWindow);
-    startInboxAutoSync(() => mainWindow);
+    startInboxIdleWatcher(() => mainWindow);
     startFollowUpReminder(() => mainWindow);
 
     globalShortcut.register('CommandOrControl+Shift+N', openQuickAddFromClipboard);

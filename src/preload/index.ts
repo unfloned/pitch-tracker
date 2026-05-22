@@ -104,6 +104,16 @@ export interface UserProfileDto {
     imapSecure: boolean;
     imapUser: string;
     imapPassword: string;
+    imapMailboxes: string[];
+    imapIncludeRead: boolean;
+}
+
+export interface MailboxInfoDto {
+    path: string;
+    name: string;
+    specialUse?: string;
+    subscribed: boolean;
+    flags: string[];
 }
 
 export type InboundReviewStatus = 'pending' | 'applied' | 'dismissed';
@@ -122,6 +132,12 @@ export interface InboundEmailDto {
     suggestedNote: string;
     confidence: number;
     reviewStatus: InboundReviewStatus;
+    llmPrompt: string;
+    llmRawResponse: string;
+    mailbox: string;
+    durationMs: number;
+    inReplyTo: string;
+    referenceIds: string;
 }
 
 export type { LlmPullProgressPayload as PullProgressEvent } from '@shared/events';
@@ -133,6 +149,7 @@ export interface InboxSyncResult {
     autoApplied: number;
     dropped: number;
     skippedDuplicates: number;
+    threadMatched: number;
     error?: string;
 }
 
@@ -279,6 +296,11 @@ const api = {
     inbox: {
         testImap: (): Promise<{ ok: boolean; error?: string; inboxMessages?: number }> =>
             ipcRenderer.invoke('inbox:testImap'),
+        listMailboxes: (): Promise<{
+            ok: boolean;
+            error?: string;
+            mailboxes?: MailboxInfoDto[];
+        }> => ipcRenderer.invoke('inbox:listMailboxes'),
         sync: (): Promise<InboxSyncResult> => ipcRenderer.invoke('inbox:sync'),
         list: (reviewStatus?: InboundReviewStatus): Promise<InboundEmailDto[]> =>
             ipcRenderer.invoke('inbox:list', reviewStatus),

@@ -1,4 +1,4 @@
-import type { IpcMain } from 'electron';
+import type { BrowserWindow, IpcMain } from 'electron';
 import type { ApplicationStatus } from '@shared/application';
 import {
     listInboundEmails,
@@ -12,11 +12,17 @@ import {
     setReviewStatus,
     syncInbox,
 } from '../inbox';
-import { testImapConnection } from '../imap';
+import { listMailboxes, testImapConnection } from '../imap';
+import { createEventSender } from './events';
 
-export function registerInboxIpc(ipcMain: IpcMain): void {
+export function registerInboxIpc(
+    ipcMain: IpcMain,
+    getWindow: () => BrowserWindow | null,
+): void {
+    const send = createEventSender(getWindow);
     ipcMain.handle('inbox:testImap', () => testImapConnection());
-    ipcMain.handle('inbox:sync', () => syncInbox());
+    ipcMain.handle('inbox:listMailboxes', () => listMailboxes());
+    ipcMain.handle('inbox:sync', () => syncInbox(send));
     ipcMain.handle('inbox:list', (_evt, reviewStatus?: InboundReviewStatus) =>
         listInboundEmails(reviewStatus),
     );

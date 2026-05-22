@@ -18,6 +18,12 @@ export interface InboundEmailRow {
     suggestedNote: string;
     confidence: number;
     reviewStatus: InboundReviewStatus;
+    llmPrompt: string;
+    llmRawResponse: string;
+    mailbox: string;
+    durationMs: number;
+    inReplyTo: string;
+    referenceIds: string;
 }
 
 export interface InboundEmailInput {
@@ -31,6 +37,12 @@ export interface InboundEmailInput {
     suggestedStatus: ApplicationStatus | 'other' | null;
     suggestedNote: string;
     confidence: number;
+    llmPrompt: string;
+    llmRawResponse: string;
+    mailbox: string;
+    durationMs: number;
+    inReplyTo: string;
+    referenceIds: string;
 }
 
 export function insertInboundEmail(input: InboundEmailInput): InboundEmailRow | null {
@@ -42,8 +54,9 @@ export function insertInboundEmail(input: InboundEmailInput): InboundEmailRow | 
         .prepare(
             `INSERT OR IGNORE INTO inbound_emails (
                 id, messageId, fromAddress, fromName, subject, bodyText, receivedAt, fetchedAt,
-                suggestedApplicationId, suggestedStatus, suggestedNote, confidence, reviewStatus
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+                suggestedApplicationId, suggestedStatus, suggestedNote, confidence, reviewStatus,
+                llmPrompt, llmRawResponse, mailbox, durationMs, inReplyTo, referenceIds
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?)`,
         )
         .run(
             id,
@@ -58,6 +71,12 @@ export function insertInboundEmail(input: InboundEmailInput): InboundEmailRow | 
             input.suggestedStatus,
             input.suggestedNote,
             input.confidence,
+            input.llmPrompt,
+            input.llmRawResponse,
+            input.mailbox,
+            input.durationMs,
+            input.inReplyTo,
+            input.referenceIds,
         );
     if (result.changes === 0) return null;
     return getInboundEmailByMessageId(input.messageId);
@@ -108,6 +127,37 @@ export function updateInboundSuggestion(
             'UPDATE inbound_emails SET suggestedApplicationId = ?, suggestedStatus = ? WHERE id = ?',
         )
         .run(suggestedApplicationId, suggestedStatus, id);
+}
+
+/**
+ * Look up an inbound email by any of the given Message-IDs. Used for thread
+ * pre-matching: if a new mail references a Message-ID we already classified,
+ * we can inherit its application without asking the LLM.
+ */
+export function findInboundByAnyMessageId(messageIds: string[]): InboundEmailRow | null {
+    if (messageIds.length === 0) return null;
+    const placeholders = messageIds.map(() => '?').join(',');
+    const row = getDb()
+        .prepare(`SELECT * FROM inbound_emails WHERE messageId IN (${placeholders}) LIMIT 1`)
+        .get(...messageIds) as InboundEmailRow | undefined;
+    return row ?? null;
+}
+
+/**
+ * Look up a sent email by Message-ID. If the user sent the original mail and
+ * the reply references its Message-ID, we know the application directly.
+ */
+export function findSentEmailByMessageId(messageId: string): {
+    applicationId: string;
+    messageId: string;
+} | null {
+    if (!messageId) return null;
+    const row = getDb()
+        .prepare(
+            "SELECT applicationId, messageId FROM email_log WHERE messageId = ? AND messageId != ''",
+        )
+        .get(messageId) as { applicationId: string; messageId: string } | undefined;
+    return row ?? null;
 }
 
 export function getLatestInboundReceivedAt(): string | null {

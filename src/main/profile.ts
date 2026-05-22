@@ -21,6 +21,10 @@ export interface UserProfile {
     imapSecure: boolean;
     imapUser: string;
     imapPassword: string;
+    /** Mailbox paths to scan on sync. Empty array falls back to ['INBOX']. */
+    imapMailboxes: string[];
+    /** When true, also pulls already-seen messages from the configured mailboxes. */
+    imapIncludeRead: boolean;
 }
 
 interface StoredProfile
@@ -76,6 +80,8 @@ const store = new Store<StoredProfile>({
         imapSecure: true,
         imapUser: '',
         imapPasswordEnc: '',
+        imapMailboxes: ['INBOX'],
+        imapIncludeRead: true,
     },
 });
 
@@ -115,6 +121,8 @@ export function getUserProfile(): UserProfile {
         imapSecure: store.get('imapSecure') ?? true,
         imapUser: store.get('imapUser') ?? '',
         imapPassword: decryptPassword(store.get('imapPasswordEnc') ?? ''),
+        imapMailboxes: store.get('imapMailboxes') ?? ['INBOX'],
+        imapIncludeRead: store.get('imapIncludeRead') ?? true,
     };
 }
 

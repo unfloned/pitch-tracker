@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { AboutCard } from '../components/settings/AboutCard';
 import { AppearanceCard } from '../components/settings/AppearanceCard';
 import { BackupCard } from '../components/settings/BackupCard';
-import { EmailStyleCard } from '../components/settings/EmailStyleCard';
+import { EmailCard } from '../components/settings/EmailCard';
 import { OllamaCard } from '../components/settings/OllamaCard';
 import { ProfileCard } from '../components/settings/ProfileCard';
 import { SettingsLayout, type SettingsTab } from '../components/settings/SettingsLayout';
@@ -26,14 +26,14 @@ export function SettingsPage() {
         {
             id: 'profile',
             label: t('settings.nav.profile', 'Profil'),
-            hint: t('settings.nav.profileHint', 'Name · E-Mail · CV'),
+            hint: t('settings.nav.profileHint', 'Name · Signatur · CV'),
             render: () => <ProfileCard />,
         },
         {
             id: 'email',
-            label: t('settings.nav.email', 'E-Mail-Stil'),
-            hint: t('settings.nav.emailHint', 'Anschreiben-Vorlage'),
-            render: () => <EmailStyleCard />,
+            label: t('settings.nav.email', 'E-Mail'),
+            hint: t('settings.nav.emailHint', 'SMTP · IMAP · Stil'),
+            render: () => <EmailCard />,
         },
         {
             id: 'ollama',

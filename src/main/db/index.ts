@@ -22,6 +22,8 @@ export {
     setInboundReviewStatus,
     updateInboundSuggestion,
     getLatestInboundReceivedAt,
+    findInboundByAnyMessageId,
+    findSentEmailByMessageId,
 } from './inbox';
 export type {
     InboundEmailInput,

@@ -1,7 +1,10 @@
-import { Center, Loader, Select, Stack } from '@mantine/core';
+import { Center, Collapse, Loader, Progress, Select, Stack } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import {
     IconCheck,
+    IconChevronDown,
+    IconChevronUp,
+    IconLink,
     IconMailForward,
     IconRefresh,
     IconX,
@@ -29,6 +32,15 @@ const STATUS_OPTIONS: StatusOption[] = [
     'other',
 ];
 
+interface SyncProgress {
+    current: number;
+    total: number;
+    subject: string;
+    fromAddress: string;
+    mailbox: string;
+    durationMs?: number;
+}
+
 interface Props {
     applications: ApplicationRecord[];
     onApplicationUpdated: () => void;
@@ -39,6 +51,7 @@ export function InboxPage({ applications, onApplicationUpdated }: Props) {
     const [emails, setEmails] = useState<InboundEmailDto[]>([]);
     const [loading, setLoading] = useState(true);
     const [syncing, setSyncing] = useState(false);
+    const [progress, setProgress] = useState<SyncProgress | null>(null);
     const [filter, setFilter] = useState<InboundReviewStatus>('pending');
 
     const refresh = useCallback(async () => {
@@ -52,28 +65,62 @@ export function InboxPage({ applications, onApplicationUpdated }: Props) {
         refresh();
     }, [refresh]);
 
+    useEffect(() => {
+        const offStart = window.api.on('inbox:sync:started', (payload) => {
+            setProgress({
+                current: 0,
+                total: payload.total,
+                subject: '',
+                fromAddress: '',
+                mailbox: '',
+            });
+        });
+        const offProgress = window.api.on('inbox:sync:progress', (payload) => {
+            setProgress(payload);
+        });
+        const offFinish = window.api.on('inbox:sync:finished', () => {
+            setProgress(null);
+        });
+        return () => {
+            offStart();
+            offProgress();
+            offFinish();
+        };
+    }, []);
+
     const doSync = async () => {
         setSyncing(true);
-        const result = await window.api.inbox.sync();
-        setSyncing(false);
-        if (result.error) {
+        try {
+            const result = await window.api.inbox.sync();
+            if (result.error) {
+                notifications.show({
+                    color: 'red',
+                    title: t('inbox.syncFailed'),
+                    message: result.error,
+                    autoClose: 10000,
+                });
+            } else {
+                notifications.show({
+                    color: 'green',
+                    message: t('inbox.syncOk', {
+                        fetched: result.fetched,
+                        stored: result.stored,
+                        classified: result.classified,
+                    }),
+                });
+            }
+            await refresh();
+        } catch (err) {
             notifications.show({
                 color: 'red',
                 title: t('inbox.syncFailed'),
-                message: result.error,
+                message: (err as Error).message,
                 autoClose: 10000,
             });
-        } else {
-            notifications.show({
-                color: 'green',
-                message: t('inbox.syncOk', {
-                    fetched: result.fetched,
-                    stored: result.stored,
-                    classified: result.classified,
-                }),
-            });
+        } finally {
+            setSyncing(false);
+            setProgress(null);
         }
-        await refresh();
     };
 
     return (
@@ -124,6 +171,8 @@ export function InboxPage({ applications, onApplicationUpdated }: Props) {
                 </div>
             </div>
 
+            {progress && <SyncProgressBar progress={progress} />}
+
             {loading ? (
                 <Center mih={200}>
                     <Loader />
@@ -146,6 +195,56 @@ export function InboxPage({ applications, onApplicationUpdated }: Props) {
                 </div>
             )}
         </Stack>
+    );
+}
+
+function SyncProgressBar({ progress }: { progress: SyncProgress }) {
+    const { t } = useTranslation();
+    const pct = progress.total > 0 ? (progress.current / progress.total) * 100 : 0;
+    const label =
+        progress.total === 0
+            ? t('inbox.progressFetching')
+            : t('inbox.progressClassifying', {
+                  current: progress.current,
+                  total: progress.total,
+                  subject: progress.subject || '…',
+              });
+    return (
+        <div
+            style={{
+                padding: '10px 14px',
+                background: 'var(--card)',
+                border: '1px solid var(--rule)',
+                borderLeft: '3px solid var(--accent)',
+            }}
+        >
+            <div
+                style={{
+                    fontSize: 12,
+                    color: 'var(--ink-2)',
+                    marginBottom: 6,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                }}
+            >
+                {label}
+            </div>
+            <Progress value={pct} size="xs" />
+            {progress.durationMs !== undefined && progress.fromAddress && (
+                <div
+                    className="mono"
+                    style={{
+                        fontSize: 10,
+                        color: 'var(--ink-4)',
+                        marginTop: 4,
+                        letterSpacing: '0.04em',
+                    }}
+                >
+                    {progress.fromAddress} · {progress.mailbox} · {progress.durationMs}ms
+                </div>
+            )}
+        </div>
     );
 }
 
@@ -184,6 +283,7 @@ function InboundEmailCard({
         email.suggestedStatus as StatusOption | null,
     );
     const [busy, setBusy] = useState(false);
+    const [expanded, setExpanded] = useState(false);
 
     const canApply = Boolean(
         applicationId && status && status !== 'other' && email.reviewStatus === 'pending',
@@ -192,30 +292,36 @@ function InboundEmailCard({
     const apply = async () => {
         if (!applicationId || !status || status === 'other') return;
         setBusy(true);
-        const result = await window.api.inbox.applySuggestion({
-            inboundId: email.id,
-            applicationId,
-            status,
-            note: email.suggestedNote,
-        });
-        setBusy(false);
-        if (result.ok) {
-            notifications.show({ color: 'green', message: t('inbox.applied') });
-            await onChanged();
-        } else {
-            notifications.show({
-                color: 'red',
-                title: t('inbox.applyFailed'),
-                message: result.error ?? 'Unknown error',
+        try {
+            const result = await window.api.inbox.applySuggestion({
+                inboundId: email.id,
+                applicationId,
+                status,
+                note: email.suggestedNote,
             });
+            if (result.ok) {
+                notifications.show({ color: 'green', message: t('inbox.applied') });
+                await onChanged();
+            } else {
+                notifications.show({
+                    color: 'red',
+                    title: t('inbox.applyFailed'),
+                    message: result.error ?? 'Unknown error',
+                });
+            }
+        } finally {
+            setBusy(false);
         }
     };
 
     const dismiss = async () => {
         setBusy(true);
-        await window.api.inbox.dismiss(email.id);
-        setBusy(false);
-        await onChanged();
+        try {
+            await window.api.inbox.dismiss(email.id);
+            await onChanged();
+        } finally {
+            setBusy(false);
+        }
     };
 
     const appOptions = useMemo(
@@ -237,17 +343,21 @@ function InboundEmailCard({
         [t],
     );
 
+    const accentColor = !email.suggestedApplicationId
+        ? '3px solid var(--rust)'
+        : email.confidence >= 70
+          ? '3px solid var(--moss)'
+          : email.confidence >= 40
+            ? '3px solid var(--accent)'
+            : '3px solid var(--rule-strong)';
+
     return (
         <div
             style={{
                 padding: '12px 14px',
                 background: 'var(--card)',
                 border: '1px solid var(--rule)',
-                borderLeft: email.confidence >= 70
-                    ? '3px solid var(--moss)'
-                    : email.confidence >= 40
-                      ? '3px solid var(--accent)'
-                      : '3px solid var(--rule-strong)',
+                borderLeft: accentColor,
             }}
         >
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
@@ -272,6 +382,35 @@ function InboundEmailCard({
                     {email.fromAddress}
                 </span>
                 <div style={{ flex: 1 }} />
+                {email.mailbox && email.mailbox !== 'INBOX' && (
+                    <span
+                        className="mono"
+                        style={{
+                            fontSize: 10,
+                            color: 'var(--ink-4)',
+                            letterSpacing: '0.04em',
+                        }}
+                    >
+                        {email.mailbox}
+                    </span>
+                )}
+                {(email.inReplyTo || email.referenceIds) && (
+                    <span
+                        className="mono"
+                        title={t('inbox.threadBadge')}
+                        style={{
+                            fontSize: 10,
+                            color: 'var(--moss)',
+                            letterSpacing: '0.04em',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 3,
+                        }}
+                    >
+                        <IconLink size={10} />
+                        {t('inbox.threadBadge')}
+                    </span>
+                )}
                 <span
                     className="mono tnum"
                     style={{
@@ -293,6 +432,19 @@ function InboundEmailCard({
             >
                 {email.subject || '(no subject)'}
             </div>
+
+            {!email.suggestedApplicationId && (
+                <div
+                    style={{
+                        marginTop: 8,
+                        fontSize: 11,
+                        color: 'var(--rust)',
+                        fontStyle: 'italic',
+                    }}
+                >
+                    {t('inbox.noMatch')}
+                </div>
+            )}
 
             {email.suggestedNote && (
                 <div
@@ -372,6 +524,12 @@ function InboundEmailCard({
                     <IconX size={12} />
                     <span>{t('inbox.dismiss')}</span>
                 </GhostBtn>
+                <GhostBtn onClick={() => setExpanded((v) => !v)}>
+                    {expanded ? <IconChevronUp size={12} /> : <IconChevronDown size={12} />}
+                    <span>
+                        {expanded ? t('inbox.hideDetails') : t('inbox.showDetails')}
+                    </span>
+                </GhostBtn>
                 {email.reviewStatus !== 'pending' && (
                     <span
                         className="mono"
@@ -390,6 +548,158 @@ function InboundEmailCard({
                     </span>
                 )}
             </div>
+
+            <Collapse expanded={expanded}>
+                <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <DetailBlock label={t('inbox.emailBody')}>
+                        <pre
+                            className="mono"
+                            style={{
+                                margin: 0,
+                                padding: 12,
+                                background: 'var(--paper-2)',
+                                border: '1px solid var(--rule)',
+                                fontSize: 11.5,
+                                lineHeight: 1.5,
+                                color: 'var(--ink-2)',
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-word',
+                                maxHeight: 400,
+                                overflow: 'auto',
+                            }}
+                        >
+                            {email.bodyText || '(empty body)'}
+                        </pre>
+                    </DetailBlock>
+
+                    {(email.inReplyTo || email.referenceIds) && (
+                        <DetailBlock label={t('inbox.threadHeaders')}>
+                            <div
+                                className="mono"
+                                style={{
+                                    fontSize: 10.5,
+                                    color: 'var(--ink-3)',
+                                    background: 'var(--paper-2)',
+                                    border: '1px solid var(--rule)',
+                                    padding: 10,
+                                    lineHeight: 1.5,
+                                    wordBreak: 'break-all',
+                                }}
+                            >
+                                {email.inReplyTo && (
+                                    <div>
+                                        <strong>{t('inbox.inReplyTo')}:</strong>{' '}
+                                        {email.inReplyTo}
+                                    </div>
+                                )}
+                                {email.referenceIds && (
+                                    <div style={{ marginTop: email.inReplyTo ? 6 : 0 }}>
+                                        <strong>{t('inbox.references')}:</strong>{' '}
+                                        {email.referenceIds}
+                                    </div>
+                                )}
+                            </div>
+                        </DetailBlock>
+                    )}
+
+                    <DetailBlock
+                        label={t('inbox.llmDebug')}
+                        meta={
+                            email.durationMs > 0
+                                ? t('inbox.llmDuration', { ms: email.durationMs })
+                                : undefined
+                        }
+                    >
+                        {email.llmPrompt || email.llmRawResponse ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                <DebugBox label={t('inbox.llmPrompt')} text={email.llmPrompt} />
+                                <DebugBox
+                                    label={t('inbox.llmRawResponse')}
+                                    text={email.llmRawResponse}
+                                />
+                            </div>
+                        ) : (
+                            <div
+                                style={{
+                                    fontSize: 11,
+                                    color: 'var(--ink-4)',
+                                    fontStyle: 'italic',
+                                }}
+                            >
+                                {t('inbox.llmEmpty')}
+                            </div>
+                        )}
+                    </DetailBlock>
+                </div>
+            </Collapse>
+        </div>
+    );
+}
+
+function DetailBlock({
+    label,
+    meta,
+    children,
+}: {
+    label: string;
+    meta?: string;
+    children: React.ReactNode;
+}) {
+    return (
+        <div>
+            <div
+                style={{
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    gap: 8,
+                    marginBottom: 6,
+                }}
+            >
+                <Label>{label}</Label>
+                {meta && (
+                    <span className="mono" style={{ fontSize: 10, color: 'var(--ink-4)' }}>
+                        {meta}
+                    </span>
+                )}
+            </div>
+            {children}
+        </div>
+    );
+}
+
+function DebugBox({ label, text }: { label: string; text: string }) {
+    return (
+        <div>
+            <div
+                className="mono"
+                style={{
+                    fontSize: 10,
+                    color: 'var(--ink-4)',
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    marginBottom: 4,
+                }}
+            >
+                {label}
+            </div>
+            <pre
+                className="mono"
+                style={{
+                    margin: 0,
+                    padding: 10,
+                    background: 'var(--paper-2)',
+                    border: '1px solid var(--rule)',
+                    fontSize: 10.5,
+                    lineHeight: 1.5,
+                    color: 'var(--ink-3)',
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    maxHeight: 280,
+                    overflow: 'auto',
+                }}
+            >
+                {text || '(empty)'}
+            </pre>
         </div>
     );
 }

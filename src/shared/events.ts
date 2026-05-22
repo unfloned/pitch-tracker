@@ -90,6 +90,31 @@ export interface InboxAutoSyncedPayload {
     autoApplied: number;
     dropped: number;
     skippedDuplicates: number;
+    threadMatched: number;
+    error?: string;
+}
+
+export interface InboxSyncStartedPayload {
+    total: number;
+}
+
+export interface InboxSyncProgressPayload {
+    current: number;
+    total: number;
+    subject: string;
+    fromAddress: string;
+    mailbox: string;
+    durationMs?: number;
+}
+
+export interface InboxSyncFinishedPayload {
+    fetched: number;
+    stored: number;
+    classified: number;
+    autoApplied: number;
+    dropped: number;
+    skippedDuplicates: number;
+    threadMatched: number;
     error?: string;
 }
 
@@ -104,6 +129,9 @@ export interface RendererEventMap {
     'agents:candidateAdded': AgentsCandidateAddedPayload;
     'agents:autoImported': AgentsAutoImportedPayload;
     'inbox:autoSynced': InboxAutoSyncedPayload;
+    'inbox:sync:started': InboxSyncStartedPayload;
+    'inbox:sync:progress': InboxSyncProgressPayload;
+    'inbox:sync:finished': InboxSyncFinishedPayload;
     'llm:pullProgress': LlmPullProgressPayload;
     'navigate': string;
     'navigate:quickAdd': NavigateQuickAddPayload;

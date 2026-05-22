@@ -91,6 +91,7 @@ export function initDatabase(): void {
     createEventsTable(db);
     createEmailLogTable(db);
     createInboundEmailsTable(db);
+    runInboundEmailsMigrations(db);
     backfillSeedEvents(db);
 }
 
@@ -177,6 +178,23 @@ function createEmailLogTable(db: Database.Database): void {
         CREATE INDEX IF NOT EXISTS email_log_app_idx
             ON email_log(applicationId, sentAt);
     `);
+}
+
+function runInboundEmailsMigrations(db: Database.Database): void {
+    const cols = db.prepare('PRAGMA table_info(inbound_emails)').all() as { name: string }[];
+    const set = new Set(cols.map((c) => c.name));
+    const migrations: Array<[string, string]> = [
+        ['llmPrompt', "ALTER TABLE inbound_emails ADD COLUMN llmPrompt TEXT NOT NULL DEFAULT ''"],
+        ['llmRawResponse', "ALTER TABLE inbound_emails ADD COLUMN llmRawResponse TEXT NOT NULL DEFAULT ''"],
+        ['mailbox', "ALTER TABLE inbound_emails ADD COLUMN mailbox TEXT NOT NULL DEFAULT 'INBOX'"],
+        ['durationMs', "ALTER TABLE inbound_emails ADD COLUMN durationMs INTEGER NOT NULL DEFAULT 0"],
+        ['inReplyTo', "ALTER TABLE inbound_emails ADD COLUMN inReplyTo TEXT NOT NULL DEFAULT ''"],
+        // Comma-separated list of Message-IDs from the References header.
+        ['referenceIds', "ALTER TABLE inbound_emails ADD COLUMN referenceIds TEXT NOT NULL DEFAULT ''"],
+    ];
+    for (const [col, sql] of migrations) {
+        if (!set.has(col)) db.exec(sql);
+    }
 }
 
 function createInboundEmailsTable(db: Database.Database): void {

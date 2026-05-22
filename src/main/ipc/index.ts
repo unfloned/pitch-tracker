@@ -21,5 +21,5 @@ export function registerIpcHandlers(getWindow: () => BrowserWindow | null): void
     registerChatIpc(ipcMain, getWindow);
     registerShellIpc(ipcMain);
     registerExportIpc(ipcMain);
-    registerInboxIpc(ipcMain);
+    registerInboxIpc(ipcMain, getWindow);
 }
