@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { sanitizeHtml } from '@shared/sanitize-html';
 
 interface Props {
     fromAddress: string;
@@ -62,7 +63,7 @@ export function EmailPreview({
                     color: 'var(--ink)',
                     minHeight: 200,
                 }}
-                dangerouslySetInnerHTML={{ __html: body || '<p>—</p>' }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(body) || '<p>—</p>' }}
             />
         </div>
     );

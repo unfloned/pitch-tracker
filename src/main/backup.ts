@@ -8,7 +8,7 @@ import {
     writeFileSync,
     copyFileSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 
 export interface BackupResult {
     ok: boolean;
@@ -73,8 +73,27 @@ export function restoreBackup(filePath: string): RestoreResult {
     try {
         if (!existsSync(filePath)) return { ok: false, error: 'Backup file not found' };
         const userDataPath = app.getPath('userData');
+        const userDataRoot = resolve(userDataPath) + sep;
         const zip = new AdmZip(filePath);
         const entries = zip.getEntries();
+
+        const safeJoin = (entryName: string): string | null => {
+            // Reject absolute paths, drive letters, and any traversal segment.
+            if (
+                entryName.startsWith('/') ||
+                entryName.startsWith('\\') ||
+                /^[a-z]:/i.test(entryName) ||
+                entryName.includes('..')
+            ) {
+                return null;
+            }
+            const target = resolve(userDataPath, entryName);
+            // Hard zip-slip guard: target must be inside userDataPath.
+            if (target !== resolve(userDataPath) && !target.startsWith(userDataRoot)) {
+                return null;
+            }
+            return target;
+        };
 
         let restored = 0;
         for (const entry of entries) {
@@ -82,11 +101,14 @@ export function restoreBackup(filePath: string): RestoreResult {
             if (name === 'manifest.json') continue;
             if (entry.isDirectory) continue;
             if (BACKUP_FILES.includes(name)) {
-                writeFileSync(join(userDataPath, name), entry.getData());
+                const target = safeJoin(name);
+                if (!target) continue;
+                writeFileSync(target, entry.getData());
                 restored += 1;
             } else if (name.startsWith('cv/')) {
-                const target = join(userDataPath, name);
-                const targetDir = target.substring(0, target.lastIndexOf('/'));
+                const target = safeJoin(name);
+                if (!target) continue;
+                const targetDir = target.substring(0, target.lastIndexOf(sep));
                 if (!existsSync(targetDir)) {
                     mkdirSync(targetDir, { recursive: true });
                 }

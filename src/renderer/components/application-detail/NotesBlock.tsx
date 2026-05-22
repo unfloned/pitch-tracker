@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { sanitizeHtml } from '@shared/sanitize-html';
 import { Label } from '../primitives/Label';
 
 interface Props {
@@ -31,7 +32,7 @@ export function NotesBlock({ notes }: Props) {
                     lineHeight: '24px',
                     color: 'var(--ink)',
                 }}
-                dangerouslySetInnerHTML={{ __html: notes }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(notes) }}
             />
         </div>
     );

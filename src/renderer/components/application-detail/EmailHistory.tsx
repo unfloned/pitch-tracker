@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { sanitizeHtml } from '@shared/sanitize-html';
 import type { InboundEmailDto, SentEmailRecord } from '../../../preload/index';
 import { formatDateShort, formatEventTime, stripHtmlSnippet } from '../../lib/format';
 import { Label } from '../primitives/Label';
@@ -204,7 +205,7 @@ function SentBody({ email }: { email: SentEmailRecord }) {
                     color: 'var(--ink)',
                     lineHeight: 1.55,
                 }}
-                dangerouslySetInnerHTML={{ __html: email.body }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(email.body) }}
             />
         </div>
     );

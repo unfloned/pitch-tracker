@@ -26,6 +26,7 @@ import { getUserProfile } from './profile';
 import type { ApplicationStatus } from '@shared/application';
 import { serializeApplication } from './ipc/serializers';
 import type { ApplicationRecord } from '../preload/index';
+import { escapeHtml } from '@shared/sanitize-html';
 
 export interface SyncResult {
     fetched: number;
@@ -323,9 +324,12 @@ export function applySuggestion(
         if (!app) {
             return { ok: false, error: `Application ${applicationId} not found` };
         }
+        // Notes are rendered via dangerouslySetInnerHTML downstream. The note
+        // string here came from an LLM (untrusted), so escape every HTML
+        // character before splicing it into the notes field as a paragraph.
         const prefix =
             note && note.trim().length > 0
-                ? `[${new Date().toISOString().slice(0, 10)}] ${note.trim()}\n\n`
+                ? `<p>[${new Date().toISOString().slice(0, 10)}] ${escapeHtml(note.trim())}</p>\n`
                 : '';
         const mergedNotes = prefix + (app.notes ?? '');
         const updated = updateApplication(applicationId, {

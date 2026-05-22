@@ -1,4 +1,5 @@
 import { getLlmConfig } from '../llm';
+import { inlineEscape, UNTRUSTED_NOTICE, wrapUntrusted } from '../llm/sanitize';
 
 export interface ScoringProfile {
     stackKeywords: string;
@@ -32,6 +33,8 @@ const SCORING_PROMPT = (profile: ScoringProfile) => {
         : '';
 
     return `Du bist ein KRITISCHER Job-Matcher. Du analysierst Stellenanzeigen gegen das Profil eines deutschen Senior-TypeScript-Entwicklers. Sei skeptisch. Erfinde NICHTS. Zitiere nur was im Text der Stelle wirklich steht.
+
+${UNTRUSTED_NOTICE}
 
 # PROFIL
 - Stack (gewünscht): ${profile.stackKeywords || 'TypeScript, Next.js, React, Node.js, React Native, Postgres'}
@@ -97,7 +100,7 @@ Antworte AUSSCHLIESSLICH mit JSON, kein Markdown, kein Vorspann:
   "redFlags": ["leer wenn kein Dealbreaker, sonst konkret nennen"]
 }
 
-# STELLENANZEIGE
+# STELLENANZEIGE (DATEN aus externer Quelle)
 `;
 };
 
@@ -119,7 +122,12 @@ export async function scoreJobListing(
     profile: ScoringProfile,
 ): Promise<ScoreResult> {
     const { ollamaUrl, ollamaModel } = getLlmConfig();
-    const text = `Titel: ${title}\nFirma: ${company}\nOrt: ${location}\n\nBeschreibung:\n${summary}`;
+    const text = `Titel: ${inlineEscape(title)}
+Firma: ${inlineEscape(company)}
+Ort: ${inlineEscape(location)}
+
+Beschreibung:
+${wrapUntrusted('job_summary', summary)}`;
 
     const empty = (score: number, reason: string): ScoreResult => ({
         score,

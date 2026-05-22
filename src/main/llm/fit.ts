@@ -2,13 +2,16 @@ import type { ApplicationInput, FitAssessment } from '@shared/application';
 import { getAgentProfile } from '../agents';
 import { FIT_SCORE_MAX, FIT_SCORE_MIN, OLLAMA_FETCH_TIMEOUT_MS } from '../constants';
 import { getLlmConfig } from './config';
+import { inlineEscape, UNTRUSTED_NOTICE, wrapUntrusted } from './sanitize';
 
 const FIT_PROMPT = `Bewerte die Passung dieser Stelle zum Profil des Bewerbers.
 
-Profil des Bewerbers:
+${UNTRUSTED_NOTICE}
+
+Profil des Bewerbers (vertrauenswürdig):
 {PROFILE}
 
-Stelle:
+Stelle (DATEN aus externer Quelle):
 {JOB}
 
 Gib ein JSON zurück ohne Markdown-Codeblöcke:
@@ -29,18 +32,22 @@ function renderProfile(): string {
 }
 
 function renderJob(input: ApplicationInput): string {
-    const requirements = (input.requiredProfile ?? []).map((line) => `- ${line}`).join('\n');
-    const benefits = (input.benefits ?? []).map((line) => `- ${line}`).join('\n');
+    const requirements = (input.requiredProfile ?? [])
+        .map((line) => `- ${inlineEscape(line, 300)}`)
+        .join('\n');
+    const benefits = (input.benefits ?? [])
+        .map((line) => `- ${inlineEscape(line, 300)}`)
+        .join('\n');
     return [
-        `Firma: ${input.companyName || ''}`,
-        `Titel: ${input.jobTitle || ''}`,
-        `Ort: ${input.location || ''}`,
-        `Remote: ${input.remote || 'onsite'}`,
-        `Gehalt: ${input.salaryMin || 0}-${input.salaryMax || 0} ${input.salaryCurrency || 'EUR'}`,
-        `Stack: ${input.stack || ''}`,
+        `Firma: ${inlineEscape(input.companyName ?? '')}`,
+        `Titel: ${inlineEscape(input.jobTitle ?? '')}`,
+        `Ort: ${inlineEscape(input.location ?? '')}`,
+        `Remote: ${inlineEscape(input.remote ?? 'onsite', 30)}`,
+        `Gehalt: ${Number(input.salaryMin) || 0}-${Number(input.salaryMax) || 0} ${inlineEscape(input.salaryCurrency ?? 'EUR', 10)}`,
+        `Stack: ${inlineEscape(input.stack ?? '', 500)}`,
         `Anforderungen:\n${requirements}`,
         `Benefits:\n${benefits}`,
-        `Beschreibung:\n${input.jobDescription || ''}`,
+        `Beschreibung:\n${wrapUntrusted('job_description', input.jobDescription ?? '')}`,
     ].join('\n');
 }
 

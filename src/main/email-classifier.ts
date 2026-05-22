@@ -1,5 +1,6 @@
 import type { ApplicationStatus } from '@shared/application';
 import { getLlmConfig } from './llm';
+import { inlineEscape, UNTRUSTED_NOTICE, wrapUntrusted } from './llm/sanitize';
 import type { ApplicationRow } from './db/types';
 
 export interface ClassifyInput {
@@ -55,6 +56,8 @@ export interface ClassifyOutput {
 
 const SYSTEM_PROMPT = `Du analysierst eine eingehende E-Mail zu einer laufenden Bewerbung und ordnest sie einer Bewerbung zu, falls möglich. Gib AUSSCHLIESSLICH JSON zurück, kein Markdown.
 
+${UNTRUSTED_NOTICE}
+
 Zuordnung (Feld "applicationId"):
 - Match nur wenn Absender-Domain oder Signatur klar zur Firma einer Bewerbung gehört, oder die Mail einen Jobtitel nennt der zur Bewerbung passt.
 - Wenn ein "# Verlauf" mitgegeben ist: die Mail ist mit hoher Wahrscheinlichkeit eine Fortsetzung dieses Threads. Vertraue dem Verlauf wenn Absender + Thema konsistent sind.
@@ -97,7 +100,7 @@ export async function classifyInboundEmail(
             : activeApplications
                   .map(
                       (a, i) =>
-                          `${i + 1}. id="${a.id}" Firma="${a.companyName}" Titel="${a.jobTitle}" Kontakt="${a.contactEmail}"`,
+                          `${i + 1}. id="${inlineEscape(a.id, 64)}" Firma="${inlineEscape(a.companyName)}" Titel="${inlineEscape(a.jobTitle)}" Kontakt="${inlineEscape(a.contactEmail, 120)}"`,
                   )
                   .join('\n');
 
@@ -107,11 +110,11 @@ export async function classifyInboundEmail(
 ${appsBlock}
 ${contextBlock}
 # Eingehende Mail
-Absender: ${input.fromName} <${input.fromAddress}>
-Betreff: ${input.subject}
+Absender: ${inlineEscape(input.fromName, 200)} <${inlineEscape(input.fromAddress, 200)}>
+Betreff: ${wrapUntrusted('subject', input.subject)}
 
 Body:
-${input.bodyText.slice(0, 6000)}`;
+${wrapUntrusted('body', input.bodyText.slice(0, 6000))}`;
 
     const fullPrompt = SYSTEM_PROMPT + '\n\n' + userBlock;
 
@@ -150,13 +153,13 @@ function buildContextBlock(context: ClassifyContext | undefined): string {
 
     if (app) {
         lines.push(
-            `Wahrscheinlich passende Bewerbung: id="${app.id}" Firma="${app.companyName}" Titel="${app.jobTitle}" aktueller Status="${app.status}"`,
+            `Wahrscheinlich passende Bewerbung: id="${inlineEscape(app.id, 64)}" Firma="${inlineEscape(app.companyName)}" Titel="${inlineEscape(app.jobTitle)}" aktueller Status="${inlineEscape(app.status, 30)}"`,
         );
         if (app.notes && app.notes.trim().length > 0) {
-            lines.push(`Notizen: ${app.notes.slice(0, 500).replace(/\n+/g, ' ')}`);
+            lines.push(`Notizen: ${inlineEscape(app.notes, 500)}`);
         }
         if (app.interviews.length > 0) {
-            lines.push(`Interviews bisher: ${app.interviews.join(' | ')}`);
+            lines.push(`Interviews bisher: ${app.interviews.map((i) => inlineEscape(i, 100)).join(' | ')}`);
         }
     }
 
@@ -172,13 +175,13 @@ function buildContextBlock(context: ClassifyContext | undefined): string {
     for (const m of sortedSent) {
         merged.push({
             when: m.sentAt,
-            line: `[${formatDate(m.sentAt)}] ICH → ${m.toAddress} · "${m.subject}"\n${truncate(m.body, CONTEXT_BODY_LIMIT)}`,
+            line: `[${formatDate(m.sentAt)}] ICH → ${inlineEscape(m.toAddress, 200)} · "${inlineEscape(m.subject)}"\n${wrapUntrusted('sent_body', truncate(m.body, CONTEXT_BODY_LIMIT))}`,
         });
     }
     for (const m of sortedInbound) {
         merged.push({
             when: m.receivedAt,
-            line: `[${formatDate(m.receivedAt)}] ${m.fromAddress} → ICH · "${m.subject}" (zugeordnet: ${m.matchedApplicationId ?? '-'}, Status: ${m.suggestedStatus ?? '-'})\n${truncate(m.bodyText, CONTEXT_BODY_LIMIT)}`,
+            line: `[${formatDate(m.receivedAt)}] ${inlineEscape(m.fromAddress, 200)} → ICH · "${inlineEscape(m.subject)}" (zugeordnet: ${inlineEscape(m.matchedApplicationId ?? '-', 64)}, Status: ${inlineEscape(m.suggestedStatus ?? '-', 30)})\n${wrapUntrusted('prev_body', truncate(m.bodyText, CONTEXT_BODY_LIMIT))}`,
         });
     }
 

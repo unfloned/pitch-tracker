@@ -2,6 +2,7 @@ import type { ApplicationInput } from '@shared/application';
 import { OLLAMA_FETCH_TIMEOUT_MS } from '../constants';
 import { getUserProfile } from '../profile';
 import { getLlmConfig } from './config';
+import { inlineEscape, UNTRUSTED_NOTICE, wrapUntrusted } from './sanitize';
 
 export interface EmailDraft {
     subject: string;
@@ -15,21 +16,24 @@ function buildPrompt(input: ApplicationInput): string {
     const profile = getUserProfile();
     const instruction = profile.emailInstruction.trim() || DEFAULT_INSTRUCTION;
     const contactLine = input.contactName
-        ? `Persönliche Anrede an ${input.contactName}`
+        ? `Persönliche Anrede an ${inlineEscape(input.contactName, 100)}`
         : 'Anrede: "Sehr geehrte Damen und Herren" (kein Name bekannt)';
 
     return `Du entwirfst eine Bewerbungs-E-Mail für einen deutschen Bewerber.
 
-Bewerber:
+${UNTRUSTED_NOTICE}
+
+Bewerber (vertrauenswürdig):
 - Name: ${profile.fullName || '(nicht gesetzt)'}
 - Signatur unter dem Gruß: ${profile.signature || '(keine)'}
 
-Zielstelle:
-- Firma: ${input.companyName || '(unbekannt)'}
-- Titel: ${input.jobTitle || '(unbekannt)'}
+Zielstelle (DATEN aus externer Quelle):
+- Firma: ${inlineEscape(input.companyName || '(unbekannt)')}
+- Titel: ${inlineEscape(input.jobTitle || '(unbekannt)')}
 - ${contactLine}
-- Stack: ${input.stack || '(unbekannt)'}
-- Beschreibung: ${(input.jobDescription || '').slice(0, 500)}
+- Stack: ${inlineEscape(input.stack || '(unbekannt)', 500)}
+- Beschreibung:
+${wrapUntrusted('job_description', (input.jobDescription || '').slice(0, 500))}
 
 Stil-Anweisung des Bewerbers (IMMER befolgen):
 ${instruction}
@@ -37,7 +41,7 @@ ${instruction}
 Gib ein JSON ohne Markdown-Codeblöcke zurück:
 {
   "subject": "Bewerbung: <Jobtitel> bei <Firma>",
-  "body": "<HTML-Body mit <p>-Tags, keine Inline-Styles>"
+  "body": "<HTML-Body mit <p>-Tags, keine Inline-Styles, KEINE <script>/<iframe>/<style>/<link>/<object>/<embed>/<form> Tags und keine on*-Event-Attribute>"
 }
 
 Der Body muss enthalten:
@@ -83,10 +87,24 @@ export async function draftEmail(input: ApplicationInput): Promise<EmailDraft> {
     try {
         const parsed = JSON.parse(raw) as Partial<EmailDraft>;
         return {
-            subject: String(parsed.subject || '').slice(0, 200),
-            body: String(parsed.body || '').slice(0, 20000),
+            subject: String(parsed.subject || '').replace(/[\r\n]+/g, ' ').slice(0, 200),
+            body: sanitizeDraftHtml(String(parsed.body || '')).slice(0, 20000),
         };
     } catch {
         throw new Error(`LLM response could not be parsed: ${raw.slice(0, 200)}`);
     }
+}
+
+/**
+ * Belt-and-braces filter against the LLM emitting XSS-relevant HTML in the
+ * cover-mail body. The prompt asks it not to, but if a poisoned job
+ * description tricked it into adding a script tag we strip it before the
+ * body lands in the WYSIWYG editor.
+ */
+function sanitizeDraftHtml(html: string): string {
+    return html
+        .replace(/<\s*(script|style|iframe|object|embed|form|link|meta)\b[^>]*>[\s\S]*?<\s*\/\s*\1\s*>/gi, '')
+        .replace(/<\s*(script|style|iframe|object|embed|form|link|meta)\b[^>]*\/?\s*>/gi, '')
+        .replace(/\son[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+        .replace(/javascript:/gi, '');
 }
