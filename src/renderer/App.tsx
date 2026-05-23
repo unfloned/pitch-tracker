@@ -10,7 +10,7 @@ import { STATUS_ORDER } from '@shared/application';
 import type { ApplicationRecord } from '../preload/index';
 import { Sidebar } from './components/Sidebar';
 import { CommandPalette, spotlight } from './components/CommandPalette';
-import { ApplicationFormModal } from './components/applications/ApplicationForm';
+import { ApplicationFormModal } from './modules/applications/components/ApplicationForm';
 import { UpdateBanner } from './components/UpdateBanner';
 import { StatusFooter } from './components/StatusFooter';
 import { OnboardingWizard } from './components/OnboardingWizard';
@@ -23,7 +23,7 @@ import { ChatPage } from './pages/ChatPage';
 import { InboxPage } from './pages/InboxPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ROUTES } from './routes';
-import { useAppEvents } from './lib/useAppEvents';
+import { useAppEvents } from './hooks/useAppEvents';
 import { applyZoom, loadZoom } from './lib/zoom';
 
 const ONBOARDING_KEY = 'simple-tracker-onboarded';

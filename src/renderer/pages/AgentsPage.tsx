@@ -4,10 +4,10 @@ import { notifications } from '@mantine/notifications';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SerializedJobSearch } from '@shared/job-search';
-import { SearchRow } from '../components/agents/SearchRow';
-import { SearchFormDrawer } from '../components/agents/SearchFormDrawer';
-import { AgentProfileDrawer } from '../components/agents/AgentProfileDrawer';
-import { AgentRunLogDrawer } from '../components/agents/AgentRunLogDrawer';
+import { SearchRow } from '../modules/agents/components/SearchRow';
+import { SearchFormDrawer } from '../modules/agents/components/SearchFormDrawer';
+import { AgentProfileDrawer } from '../modules/agents/components/AgentProfileDrawer';
+import { AgentRunLogDrawer } from '../modules/agents/components/AgentRunLogDrawer';
 import { GhostBtn } from '../components/primitives/GhostBtn';
 import { Label } from '../components/primitives/Label';
 

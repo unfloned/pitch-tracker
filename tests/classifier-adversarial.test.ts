@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     buildClassifierPrompt,
     parseClassifierResponse,
-} from '../src/main/inbox';
+} from '../src/main/modules/inbox';
 import type { ApplicationRow } from '../src/main/db/types';
 
 const NONCE = 'aaaaaaaaaaaa';

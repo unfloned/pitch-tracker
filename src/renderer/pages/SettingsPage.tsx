@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AboutCard } from '../components/settings/AboutCard';
-import { AppearanceCard } from '../components/settings/AppearanceCard';
-import { BackupCard } from '../components/settings/BackupCard';
-import { EmailCard } from '../components/settings/EmailCard';
-import { OllamaCard } from '../components/settings/OllamaCard';
-import { ProfileCard } from '../components/settings/ProfileCard';
-import { SettingsLayout, type SettingsTab } from '../components/settings/SettingsLayout';
+import { AboutCard } from '../modules/settings/components/AboutCard';
+import { AppearanceCard } from '../modules/settings/components/AppearanceCard';
+import { BackupCard } from '../modules/settings/components/BackupCard';
+import { EmailCard } from '../modules/settings/components/EmailCard';
+import { OllamaCard } from '../modules/settings/components/OllamaCard';
+import { ProfileCard } from '../modules/settings/components/ProfileCard';
+import { SettingsLayout, type SettingsTab } from '../modules/settings/components/SettingsLayout';
 
 export function SettingsPage() {
     const { t } = useTranslation();

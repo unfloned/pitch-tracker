@@ -4,7 +4,7 @@ import {
     newNonce,
     untrustedNotice,
     wrapUntrusted,
-} from '../src/main/llm/sanitize';
+} from '../src/main/shared/llm-sanitize';
 import { escapeHtml, sanitizeHtml } from '../src/shared/sanitize-html';
 
 const NONCE = 'aaaaaaaaaaaa';

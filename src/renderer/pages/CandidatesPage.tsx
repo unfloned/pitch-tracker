@@ -5,14 +5,14 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ApplicationRecord } from '../../preload/index';
 import type { SerializedJobCandidate } from '@shared/job-search';
-import { CandidateDrawer } from '../components/CandidateDrawer';
-import { BulkActions } from '../components/candidates/BulkActions';
-import { CandidateList } from '../components/candidates/CandidateList';
-import { FilterBar } from '../components/candidates/FilterBar';
-import { InitialEmpty, NoMatchBanner } from '../components/candidates/EmptyStates';
-import { PageHeader } from '../components/candidates/PageHeader';
-import { useCandidates } from '../components/candidates/useCandidates';
-import { useRunningAgents } from '../components/candidates/useRunningAgents';
+import { CandidateDrawer } from '../modules/candidates/components/CandidateDrawer';
+import { BulkActions } from '../modules/candidates/components/BulkActions';
+import { CandidateList } from '../modules/candidates/components/CandidateList';
+import { FilterBar } from '../modules/candidates/components/FilterBar';
+import { InitialEmpty, NoMatchBanner } from '../modules/candidates/components/EmptyStates';
+import { PageHeader } from '../modules/candidates/components/PageHeader';
+import { useCandidates } from '../modules/candidates/components/useCandidates';
+import { useRunningAgents } from '../modules/candidates/components/useRunningAgents';
 
 interface Props {
     onCandidateImported: (app: ApplicationRecord) => void;

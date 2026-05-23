@@ -1,8 +1,8 @@
-import { ChatToolbar } from '../components/chat/ChatToolbar';
-import { Composer } from '../components/chat/Composer';
-import { MessageList } from '../components/chat/MessageList';
-import { ToolsSidebar } from '../components/chat/ToolsSidebar';
-import { useChatController } from '../components/chat/useChatController';
+import { ChatToolbar } from '../modules/chat/components/ChatToolbar';
+import { Composer } from '../modules/chat/components/Composer';
+import { MessageList } from '../modules/chat/components/MessageList';
+import { ToolsSidebar } from '../modules/chat/components/ToolsSidebar';
+import { useChatController } from '../modules/chat/components/useChatController';
 
 /**
  * Chat assistant page. Thin container composing toolbar, tools sidebar,

@@ -4,6 +4,7 @@ dist
 release
 docs
 .DS_Store
+.idea
 *.log
 *.sqlite
 *.sqlite-journal

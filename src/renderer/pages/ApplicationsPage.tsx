@@ -16,10 +16,10 @@ import { useSearchParams } from 'react-router-dom';
 import type { ApplicationRecord } from '../../preload/index';
 import type { ApplicationStatus } from '@shared/application';
 import { STATUS_ORDER } from '@shared/application';
-import { ApplicationRow } from '../components/applications/ApplicationRow';
-import { ApplicationBoard } from '../components/applications/ApplicationBoard';
-import { ApplicationDetail } from '../components/applications/ApplicationDetail';
-import { ApplicationFormModal } from '../components/applications/ApplicationForm';
+import { ApplicationRow } from '../modules/applications/components/ApplicationRow';
+import { ApplicationBoard } from '../modules/applications/components/ApplicationBoard';
+import { ApplicationDetail } from '../modules/applications/components/ApplicationDetail';
+import { ApplicationFormModal } from '../modules/applications/components/ApplicationForm';
 import {
     APP_COLUMN_DEFS,
     buildAppRowGrid,
@@ -30,7 +30,7 @@ import {
     type AppBucket,
     type AppColumnId,
     type AppView,
-} from '../components/applications/prefs';
+} from '../modules/applications/prefs';
 import { GhostBtn } from '../components/primitives/GhostBtn';
 import { Label } from '../components/primitives/Label';
 

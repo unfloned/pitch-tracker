@@ -1,13 +1,13 @@
 import type { ApplicationRecord } from '../../preload/index';
-import { FunnelSection } from '../components/analytics/FunnelSection';
-import { KpiStrip } from '../components/analytics/KpiStrip';
-import { Masthead } from '../components/analytics/Masthead';
-import { ObservationsStrip } from '../components/analytics/ObservationsStrip';
-import { PipelineSection } from '../components/analytics/PipelineSection';
-import { SourcesSection } from '../components/analytics/SourcesSection';
-import { StageTransitions } from '../components/analytics/StageTransitions';
-import { WeeklyChart } from '../components/analytics/WeeklyChart';
-import { useAnalyticsData } from '../components/analytics/useAnalyticsData';
+import { FunnelSection } from '../modules/analytics/components/FunnelSection';
+import { KpiStrip } from '../modules/analytics/components/KpiStrip';
+import { Masthead } from '../modules/analytics/components/Masthead';
+import { ObservationsStrip } from '../modules/analytics/components/ObservationsStrip';
+import { PipelineSection } from '../modules/analytics/components/PipelineSection';
+import { SourcesSection } from '../modules/analytics/components/SourcesSection';
+import { StageTransitions } from '../modules/analytics/components/StageTransitions';
+import { WeeklyChart } from '../modules/analytics/components/WeeklyChart';
+import { useAnalyticsData } from '../modules/analytics/components/useAnalyticsData';
 
 interface Props {
     applications: ApplicationRecord[];

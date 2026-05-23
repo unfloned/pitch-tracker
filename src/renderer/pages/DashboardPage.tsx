@@ -1,11 +1,11 @@
 import type { ApplicationRecord } from '../../preload/index';
-import { ActionsCard } from '../components/dashboard/ActionsCard';
-import { DashboardMasthead } from '../components/dashboard/DashboardMasthead';
-import { EmptyState } from '../components/dashboard/EmptyState';
-import { RecentActivityCard } from '../components/dashboard/RecentActivityCard';
-import { StatsCard } from '../components/dashboard/StatsCard';
-import type { PageKey } from '../components/dashboard/types';
-import { useDashboardData } from '../components/dashboard/useDashboardData';
+import { ActionsCard } from '../modules/dashboard/components/ActionsCard';
+import { DashboardMasthead } from '../modules/dashboard/components/DashboardMasthead';
+import { EmptyState } from '../modules/dashboard/components/EmptyState';
+import { RecentActivityCard } from '../modules/dashboard/components/RecentActivityCard';
+import { StatsCard } from '../modules/dashboard/components/StatsCard';
+import type { PageKey } from '../modules/dashboard/components/types';
+import { useDashboardData } from '../modules/dashboard/components/useDashboardData';
 
 interface Props {
     applications: ApplicationRecord[];
