@@ -52,9 +52,8 @@ export function SettingsLayout({ tabs, defaultTab, header }: Props) {
                     top: 'calc(var(--app-shell-header-height, 36px) + 12px)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 2,
-                    borderRight: '1px solid var(--rule)',
-                    paddingRight: 16,
+                    gap: 1,
+                    paddingRight: 12,
                 }}
             >
                 {tabs.map((tab) => {
@@ -71,24 +70,27 @@ export function SettingsLayout({ tabs, defaultTab, header }: Props) {
                                 alignItems: 'flex-start',
                                 padding: '8px 12px',
                                 border: 'none',
-                                borderLeft: `2px solid ${
-                                    isActive ? 'var(--accent)' : 'transparent'
-                                }`,
-                                background: isActive ? 'var(--paper-2)' : 'transparent',
-                                color: isActive ? 'var(--ink)' : 'var(--ink-2)',
+                                borderRadius: 7,
+                                background: isActive ? 'var(--surface)' : 'transparent',
+                                color: isActive ? 'var(--text)' : 'var(--text-muted)',
                                 fontFamily: 'var(--f-ui)',
-                                fontSize: 13,
-                                fontWeight: isActive ? 600 : 500,
+                                fontSize: 13.5,
+                                fontWeight: isActive ? 600 : 450,
                                 cursor: 'pointer',
                                 textAlign: 'left',
-                                transition: 'background 80ms, color 80ms',
+                                transition: 'background 100ms, color 100ms',
                             }}
                             onMouseEnter={(e) => {
-                                if (!isActive)
-                                    e.currentTarget.style.background = 'var(--row-hover)';
+                                if (!isActive) {
+                                    e.currentTarget.style.background = 'var(--surface)';
+                                    e.currentTarget.style.color = 'var(--text)';
+                                }
                             }}
                             onMouseLeave={(e) => {
-                                if (!isActive) e.currentTarget.style.background = 'transparent';
+                                if (!isActive) {
+                                    e.currentTarget.style.background = 'transparent';
+                                    e.currentTarget.style.color = 'var(--text-muted)';
+                                }
                             }}
                         >
                             <span>{tab.label}</span>
@@ -96,8 +98,8 @@ export function SettingsLayout({ tabs, defaultTab, header }: Props) {
                                 <span
                                     className="mono"
                                     style={{
-                                        fontSize: 10,
-                                        color: 'var(--ink-4)',
+                                        fontSize: 10.5,
+                                        color: 'var(--text-faint)',
                                         letterSpacing: '0.04em',
                                     }}
                                 >

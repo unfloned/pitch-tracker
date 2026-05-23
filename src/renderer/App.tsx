@@ -232,11 +232,11 @@ export function App() {
             <AppShell.Header
                 style={{
                     WebkitAppRegion: 'drag',
-                    borderBottom: '1px solid var(--rule-strong)',
-                    background: 'var(--paper-2)',
+                    borderBottom: '1px solid var(--hairline)',
+                    background: 'var(--bg)',
                     display: 'flex',
                     alignItems: 'center',
-                    padding: '0 12px',
+                    padding: '0 14px',
                     position: 'relative',
                 }}
             >
@@ -247,20 +247,21 @@ export function App() {
                         transform: 'translateX(-50%)',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 10,
+                        gap: 8,
                         pointerEvents: 'none',
                     }}
                 >
                     <span
                         className="mono"
                         style={{
-                            fontSize: 11,
-                            fontWeight: 600,
-                            color: 'var(--ink)',
-                            letterSpacing: '0.04em',
+                            fontSize: 10.5,
+                            fontWeight: 500,
+                            color: 'var(--text-faint)',
+                            letterSpacing: '0.06em',
+                            textTransform: 'uppercase',
                         }}
                     >
-                        ◆ Pitch Tracker
+                        Pitch Tracker
                     </span>
                 </div>
                 <div
@@ -268,7 +269,7 @@ export function App() {
                         marginLeft: 'auto',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 6,
+                        gap: 2,
                         WebkitAppRegion: 'no-drag',
                     }}
                 >
@@ -293,9 +294,9 @@ export function App() {
                             active
                             onClick={openNew}
                             style={{
-                                background: 'var(--ink)',
-                                color: 'var(--paper)',
-                                borderColor: 'var(--ink)',
+                                background: 'var(--accent)',
+                                color: '#1A1208',
+                                marginLeft: 4,
                             }}
                         >
                             <span>＋ New</span>

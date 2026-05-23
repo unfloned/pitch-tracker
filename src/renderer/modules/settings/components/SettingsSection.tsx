@@ -1,5 +1,4 @@
 import { ReactNode } from 'react';
-import { Label } from '../../../components/primitives/Label';
 
 interface Props {
     label: string;
@@ -9,26 +8,34 @@ interface Props {
 }
 
 /**
- * Shared section wrapper for the settings page. Header = mono uppercase Label
- * + optional dimmed subtitle + hairline rule. Keeps each section visually
- * consistent with the rest of the Clean Terminal layout.
+ * v2 section wrapper: uppercase label, optional subline, hairline.
  */
 export function SettingsSection({ label, subtitle, right, children }: Props) {
     return (
-        <section style={{ marginBottom: 28 }}>
+        <section style={{ marginBottom: 32 }}>
             <div
                 style={{
                     display: 'flex',
                     alignItems: 'baseline',
-                    gap: 10,
-                    paddingBottom: 8,
-                    marginBottom: 16,
-                    borderBottom: '1px solid var(--rule)',
+                    gap: 12,
+                    paddingBottom: 10,
+                    marginBottom: 18,
+                    borderBottom: '1px solid var(--hairline)',
                 }}
             >
-                <Label>{label}</Label>
+                <span
+                    style={{
+                        fontSize: 12,
+                        fontWeight: 500,
+                        color: 'var(--text-muted)',
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase',
+                    }}
+                >
+                    {label}
+                </span>
                 {subtitle && (
-                    <span style={{ fontSize: 11, color: 'var(--ink-4)' }}>{subtitle}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>{subtitle}</span>
                 )}
                 <div style={{ flex: 1 }} />
                 {right}
@@ -54,21 +61,21 @@ export function SettingsRow({ label, description, children }: RowProps) {
             style={{
                 display: 'grid',
                 gridTemplateColumns: 'minmax(160px, 240px) 1fr',
-                gap: 16,
-                padding: '10px 0',
-                borderBottom: '1px dashed var(--rule)',
+                gap: 18,
+                padding: '14px 0',
+                borderBottom: '1px solid var(--hairline)',
                 alignItems: 'center',
             }}
         >
             <div>
-                <div style={{ fontSize: 13, color: 'var(--ink)', fontWeight: 500 }}>{label}</div>
+                <div style={{ fontSize: 13.5, color: 'var(--text)', fontWeight: 500 }}>{label}</div>
                 {description && (
                     <div
                         style={{
-                            fontSize: 11,
-                            color: 'var(--ink-4)',
-                            marginTop: 2,
-                            lineHeight: 1.35,
+                            fontSize: 12,
+                            color: 'var(--text-muted)',
+                            marginTop: 3,
+                            lineHeight: 1.45,
                         }}
                     >
                         {description}
@@ -94,20 +101,22 @@ interface HintProps {
     children: ReactNode;
 }
 
-/** Inline hint block - border-left accent rule, no icons, no rounded alerts. */
+/** v2 hint: surface + accent-soft-tinted left edge, no harsh border. */
 export function SettingsHint({ tone = 'info', children }: HintProps) {
-    const borderColor =
-        tone === 'ok' ? 'var(--moss)' : tone === 'warn' ? 'var(--rust)' : 'var(--accent)';
+    const accent =
+        tone === 'ok' ? 'var(--success)' : tone === 'warn' ? 'var(--danger)' : 'var(--accent)';
+    const tint =
+        tone === 'ok' ? 'var(--success-soft)' : tone === 'warn' ? 'var(--danger-soft)' : 'var(--accent-soft)';
     return (
         <div
             style={{
-                padding: '10px 12px',
-                background: 'var(--card)',
-                border: '1px solid var(--rule)',
-                borderLeft: `3px solid ${borderColor}`,
-                fontSize: 12,
-                lineHeight: 1.5,
-                color: 'var(--ink-2)',
+                padding: '12px 14px',
+                background: tint,
+                borderLeft: `2px solid ${accent}`,
+                borderRadius: 8,
+                fontSize: 12.5,
+                lineHeight: 1.55,
+                color: 'var(--text)',
             }}
         >
             {children}

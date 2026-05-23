@@ -1,6 +1,9 @@
-/* Pitch Tracker — Clean Terminal globals */
+/* Pitch Tracker - v2 design tokens
+ * Warm charcoal (dark default-ish) / warm off-white (light), amber accent.
+ * Depth through surface elevation, not borders. Soft diffuse shadows. */
 
 /* Fonts */
+@import '@fontsource/geist-sans/300.css';
 @import '@fontsource/geist-sans/400.css';
 @import '@fontsource/geist-sans/500.css';
 @import '@fontsource/geist-sans/600.css';
@@ -8,166 +11,170 @@
 @import '@fontsource/jetbrains-mono/400.css';
 @import '@fontsource/jetbrains-mono/500.css';
 @import '@fontsource/jetbrains-mono/600.css';
+@import '@fontsource/fraunces/500-italic.css';
+@import '@fontsource/fraunces/600-italic.css';
 
+/* ── Light (default) ──────────────────────────────── */
 :root {
-    /* Neutral palette (light default) — high contrast, cool off-white */
-    --paper: #f7f7f8;
-    --paper-2: #efeff1;
-    --paper-3: #e3e3e6;
-    --card: #fcfcfd;
-    --ink: #09090b;
-    --ink-2: #1f1f23;
-    --ink-3: #52525b;
-    --ink-4: #8a8a92;
-    --rule: #d4d4d8;
-    --rule-strong: #a1a1aa;
-    --row-hover: #ebebed;
-    --row-selected: #e0e0e4;
-    --window-bg: #dcdce0;
+    /* surface ladder */
+    --bg:           #FAFAFB;
+    --surface:      #FFFFFF;
+    --surface-2:    #F3F3F5;
+    --surface-3:    #ECECF0;
 
-    /* Signal palette — marigold stays as the one warm signal */
-    --accent: oklch(0.78 0.15 72);
-    --accent-ink: oklch(0.36 0.10 60);
-    --rust: oklch(0.55 0.15 30);
-    --moss: oklch(0.58 0.09 148);
-    --sky: oklch(0.62 0.10 230);
+    /* text ladder */
+    --text:         #131318;
+    --text-muted:   #6B6B75;
+    --text-faint:   #9B9BA3;
 
-    /* Typography */
-    --f-display: 'Geist', -apple-system, system-ui, sans-serif;
-    --f-ui: 'Geist', -apple-system, system-ui, sans-serif;
-    --f-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
-    --f-display-track: -0.02em;
-    --f-display-wgt: 600;
+    /* hairlines / borders */
+    --hairline:     rgba(0,0,0,0.06);
+    --hairline-2:   rgba(0,0,0,0.10);
+
+    /* signal colors */
+    --accent:       #C26416;
+    --accent-soft:  rgba(194,100,22,0.08);
+    --accent-line:  rgba(194,100,22,0.4);
+    --success:      #4A6B3A;
+    --success-soft: rgba(74,107,58,0.10);
+    --warning:      #B58A0B;
+    --warning-soft: rgba(181,138,11,0.10);
+    --danger:       #B83D2A;
+    --danger-soft:  rgba(184,61,42,0.10);
+
+    /* shadows (soft diffuse, not block) */
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-lg: 0 16px 48px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.05);
+
+    /* typography */
+    --f-display: 'Fraunces', 'Geist', -apple-system, system-ui, serif;
+    --f-ui:      'Geist', -apple-system, system-ui, sans-serif;
+    --f-mono:    'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+    /* legacy aliases — keep old code working until pages migrated */
+    --paper:        var(--bg);
+    --paper-2:      var(--surface);
+    --paper-3:      var(--surface-2);
+    --card:         var(--surface);
+    --ink:          var(--text);
+    --ink-2:        var(--text);
+    --ink-3:        var(--text-muted);
+    --ink-4:        var(--text-faint);
+    --rule:         var(--hairline);
+    --rule-strong:  var(--hairline-2);
+    --row-hover:    var(--surface-2);
+    --row-selected: var(--surface-3);
+    --window-bg:    var(--bg);
+    --accent-ink:   var(--accent);
+    --rust:         var(--danger);
+    --moss:         var(--success);
+    --sky:          #3A6B9E;
 }
 
-/* Dark mode — neutral, near-black */
+/* ── Dark ─────────────────────────────────────────── */
 [data-mantine-color-scheme='dark'] {
-    --paper: #16161a;
-    --paper-2: #1e1e23;
-    --paper-3: #27272c;
-    --card: #1b1b1f;
-    --ink: #fafafa;
-    --ink-2: #d4d4d8;
-    --ink-3: #a1a1aa;
-    --ink-4: #71717a;
-    --rule: #2a2a2e;
-    --rule-strong: #3a3a40;
-    --row-hover: #24242a;
-    --row-selected: #2f2f36;
-    --window-bg: #0a0a0c;
+    --bg:           #0D0D11;
+    --surface:      #16161B;
+    --surface-2:    #1D1D24;
+    --surface-3:    #25252D;
+
+    --text:         #ECECF0;
+    --text-muted:   #8A8A95;
+    --text-faint:   #5A5A64;
+
+    --hairline:     rgba(255,255,255,0.06);
+    --hairline-2:   rgba(255,255,255,0.10);
+
+    --accent:       #FFB35C;
+    --accent-soft:  rgba(255,179,92,0.12);
+    --accent-line:  rgba(255,179,92,0.5);
+    --success:      #8FB075;
+    --success-soft: rgba(143,176,117,0.12);
+    --warning:      #E8C84B;
+    --warning-soft: rgba(232,200,75,0.10);
+    --danger:       #E07A6B;
+    --danger-soft:  rgba(224,122,107,0.12);
+
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.5);
+    --shadow-md: 0 8px 24px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.6);
+    --shadow-lg: 0 16px 48px rgba(0,0,0,0.55), 0 2px 4px rgba(0,0,0,0.6);
 }
 
+/* ── User-tunable UI scale ────────────────────────── */
 :root {
-    /* User-tunable UI scale. --zoom-content only scales the main content
-       area, --zoom-sidebar-rel only scales the sidebar text. They do not
-       affect each other, the header, or the footer. */
     --zoom-content: 1;
     --zoom-sidebar-rel: 1;
 }
+.content-zoom { zoom: var(--zoom-content); }
 
-.content-zoom {
-    zoom: var(--zoom-content);
-}
-
-/* Sidebar text size: purely a font-size change on the inner container.
-   Items inside use em so they grow with the text. The navbar box itself
-   stays untouched, 220px wide, full viewport height between header and
-   footer. If the scaled text makes items taller than the box, the inner
-   container scrolls. */
 .sidebar-root {
     font-size: calc(13px * var(--zoom-sidebar-rel, 1));
     height: 100%;
     overflow-y: auto;
 }
 
-html,
-body {
-    margin: 0;
-    padding: 0;
+/* ── Base ─────────────────────────────────────────── */
+html, body {
+    margin: 0; padding: 0;
     font-family: var(--f-ui);
-    background: var(--paper);
-    color: var(--ink);
+    background: var(--bg);
+    color: var(--text);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
 }
+body { font-size: 13.5px; line-height: 1.5; }
 
-body {
-    font-size: 13.5px;
-    line-height: 1.45;
-}
-
-/* Utility classes */
+/* utility classes */
 .serif {
     font-family: var(--f-display);
-    letter-spacing: var(--f-display-track);
-    font-weight: var(--f-display-wgt);
+    font-style: italic;
+    font-weight: 500;
 }
-
-.mono {
-    font-family: var(--f-mono);
-}
-
+.mono { font-family: var(--f-mono); }
 .tnum {
     font-variant-numeric: tabular-nums;
     font-feature-settings: 'tnum';
 }
 
-/* Scrollbar — thin, paper-toned */
-::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-}
-
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-
+/* ── Scrollbar ────────────────────────────────────── */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-    background: var(--rule);
-    border-radius: 0;
-    border: 2px solid var(--paper);
+    background: var(--hairline-2);
+    border-radius: 8px;
+    border: 2px solid var(--bg);
 }
+::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
 
-::-webkit-scrollbar-thumb:hover {
-    background: var(--rule-strong);
-}
-
-/* Selection — dark text on marigold, works in both color schemes */
+/* selection */
 ::selection {
-    background: var(--accent);
-    color: #0a0a0c;
+    background: var(--accent-soft);
+    color: var(--text);
 }
 
-/* Blinking cursor for composer */
-@keyframes blink {
-    50% {
-        opacity: 0;
-    }
-}
-
-/* Indeterminate pull progress: 0%-total events come in before download starts */
+/* ── Animations ───────────────────────────────────── */
+@keyframes blink { 50% { opacity: 0; } }
 @keyframes pulse-pull {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(400%); }
 }
-
-/* Soft pulse for "agent running" indicator dots */
 @keyframes agent-pulse {
     0%, 100% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.4; transform: scale(0.85); }
 }
 
-/* Mantine overrides — wrap, don't replace */
+/* ── Mantine overrides ────────────────────────────── */
+
 .mantine-AppShell-main {
-    background: var(--paper) !important;
-    color: var(--ink);
+    background: var(--bg) !important;
+    color: var(--text);
 }
 
 .mantine-AppShell-navbar {
-    background: var(--paper) !important;
-    border-right: 1px solid var(--rule-strong) !important;
-    /* Belt + suspenders: Mantine defaults this to fixed, but force it so
-       nothing in our cascade can accidentally un-fix it. */
+    background: var(--bg) !important;
+    border-right: 1px solid var(--hairline) !important;
     position: fixed !important;
     inset-inline-start: 0 !important;
     top: var(--app-shell-header-height, 36px) !important;
@@ -176,8 +183,8 @@ body {
 }
 
 .mantine-AppShell-header {
-    background: var(--paper-2) !important;
-    border-bottom: 1px solid var(--rule-strong) !important;
+    background: var(--bg) !important;
+    border-bottom: 1px solid var(--hairline) !important;
     position: fixed !important;
     top: 0 !important;
     inset-inline: 0 !important;
@@ -185,8 +192,8 @@ body {
 }
 
 .mantine-AppShell-footer {
-    background: var(--paper-2) !important;
-    border-top: 1px solid var(--rule-strong) !important;
+    background: var(--bg) !important;
+    border-top: 1px solid var(--hairline) !important;
     height: 28px !important;
     min-height: 28px !important;
     position: fixed !important;
@@ -195,300 +202,336 @@ body {
     z-index: 200 !important;
 }
 
-/* Don't-ship: remove default card shadows anywhere shadow="sm" etc used */
+/* Paper/Card — depth via surface, not border */
 .mantine-Paper-root,
 .mantine-Card-root {
-    box-shadow: none !important;
+    background: var(--surface) !important;
+    border-color: transparent !important;
+    color: var(--text);
+    box-shadow: var(--shadow-sm) !important;
 }
 
-/* Modal / Drawer — paper surface */
+/* Modal / Drawer */
 .mantine-Modal-content,
 .mantine-Drawer-content {
-    background: var(--paper) !important;
-    color: var(--ink);
+    background: var(--bg) !important;
+    color: var(--text);
+    box-shadow: var(--shadow-lg) !important;
 }
-
 .mantine-Modal-header,
 .mantine-Drawer-header {
-    background: var(--paper-2) !important;
-    border-bottom: 1px solid var(--rule) !important;
+    background: var(--bg) !important;
+    border-bottom: 1px solid var(--hairline) !important;
 }
 
-/* No pills. Badges corners 2px only. */
+/* Badges — soft pill */
 .mantine-Badge-root {
-    border-radius: 2px !important;
+    border-radius: 6px !important;
+    text-transform: none !important;
+    font-weight: 500 !important;
+    letter-spacing: 0 !important;
 }
 
-/* Buttons: flatter corners, no shadow */
+/* Buttons — softer corners, no hard shadows */
 .mantine-Button-root {
-    border-radius: 4px !important;
+    border-radius: 7px !important;
     box-shadow: none !important;
+    font-weight: 500 !important;
+}
+.mantine-Button-root[data-variant='filled'] {
+    background: var(--accent) !important;
+    color: #1A1208 !important;
+}
+.mantine-Button-root[data-variant='filled']:hover {
+    background: var(--accent) !important;
+    filter: brightness(1.08);
+}
+[data-mantine-color-scheme='light'] .mantine-Button-root[data-variant='filled'] {
+    color: #FAFAFA !important;
+}
+.mantine-Button-root[data-variant='subtle'],
+.mantine-Button-root[data-variant='default'] {
+    background: transparent !important;
+    color: var(--text-muted) !important;
+    border: none !important;
+}
+.mantine-Button-root[data-variant='subtle']:hover,
+.mantine-Button-root[data-variant='default']:hover {
+    background: var(--surface-2) !important;
+    color: var(--text) !important;
 }
 
-/* Inputs: hairline paper look */
+/* Inputs — quiet, no harsh border */
 .mantine-Input-input,
 .mantine-TextInput-input,
 .mantine-Select-input,
-.mantine-Textarea-input {
-    background: var(--card) !important;
-    border: 1px solid var(--rule-strong) !important;
-    color: var(--ink) !important;
-    border-radius: 4px !important;
+.mantine-Textarea-input,
+.mantine-NumberInput-input {
+    background: var(--surface) !important;
+    border: 1px solid var(--hairline) !important;
+    color: var(--text) !important;
+    border-radius: 7px !important;
+    transition: border-color 100ms, background 100ms;
 }
-
 .mantine-Input-input:focus,
 .mantine-TextInput-input:focus,
 .mantine-Select-input:focus,
-.mantine-Textarea-input:focus {
-    border-color: var(--ink-2) !important;
+.mantine-Textarea-input:focus,
+.mantine-NumberInput-input:focus {
+    border-color: var(--accent-line) !important;
+    background: var(--surface) !important;
+}
+.mantine-Input-input::placeholder,
+.mantine-TextInput-input::placeholder,
+.mantine-Textarea-input::placeholder {
+    color: var(--text-faint) !important;
 }
 
-/* Notifications — status-bar toast feel */
+/* Notifications */
 .mantine-Notification-root {
-    border-radius: 4px !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18) !important;
-    border: 1px solid var(--rule-strong) !important;
-    background: var(--paper) !important;
-    color: var(--ink) !important;
+    border-radius: 10px !important;
+    box-shadow: var(--shadow-lg) !important;
+    border: 1px solid var(--hairline) !important;
+    background: var(--surface) !important;
+    color: var(--text) !important;
 }
 
 /* Menu (dropdowns) */
 .mantine-Menu-dropdown {
-    background: var(--paper) !important;
-    border: 1px solid var(--rule-strong) !important;
-    border-radius: 4px !important;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12) !important;
+    background: var(--surface) !important;
+    border: 1px solid var(--hairline) !important;
+    border-radius: 10px !important;
+    box-shadow: var(--shadow-md) !important;
+    padding: 4px !important;
 }
-
 .mantine-Menu-item {
-    border-radius: 3px !important;
+    border-radius: 6px !important;
+    color: var(--text-muted) !important;
+}
+.mantine-Menu-item:hover {
+    background: var(--surface-2) !important;
+    color: var(--text) !important;
 }
 
 /* Tooltip */
 .mantine-Tooltip-tooltip {
-    background: var(--ink) !important;
-    color: var(--paper) !important;
+    background: var(--text) !important;
+    color: var(--bg) !important;
     font-family: var(--f-mono);
     font-size: 10.5px !important;
     letter-spacing: 0.02em;
-    border-radius: 3px !important;
+    border-radius: 5px !important;
+    padding: 4px 8px !important;
 }
 
-/* Tabs — GhostBtn-style */
+/* Tabs */
 .mantine-Tabs-tab {
-    border-radius: 0 !important;
-    border: 1px solid transparent !important;
-    color: var(--ink-2) !important;
+    border-radius: 6px !important;
+    border: none !important;
+    color: var(--text-muted) !important;
+    font-weight: 500 !important;
 }
-
+.mantine-Tabs-tab:hover {
+    background: var(--surface-2) !important;
+    color: var(--text) !important;
+}
 .mantine-Tabs-tab[data-active] {
-    background: var(--paper-2) !important;
-    border-color: var(--rule-strong) !important;
-    color: var(--ink) !important;
+    background: var(--surface-2) !important;
+    color: var(--text) !important;
     font-weight: 600 !important;
 }
+.mantine-Tabs-list {
+    border-bottom: 1px solid var(--hairline) !important;
+}
 
-/* Progress — flat ink */
+/* Progress */
 .mantine-Progress-bar {
-    background: var(--ink-2) !important;
+    background: var(--accent) !important;
 }
-
 .mantine-Progress-root {
-    background: var(--paper-3) !important;
+    background: var(--surface-2) !important;
 }
 
-/* Spotlight (⌘K palette) — paper overlay */
+/* Spotlight (Cmd+K) */
 .mantine-Spotlight-root {
-    background: var(--paper) !important;
-    border: 1px solid var(--ink) !important;
-    border-radius: 2px !important;
-    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.3) !important;
+    background: var(--surface) !important;
+    border: 1px solid var(--hairline) !important;
+    border-radius: 12px !important;
+    box-shadow: var(--shadow-lg) !important;
 }
-
 .mantine-Spotlight-search {
-    background: var(--paper) !important;
-    border-bottom: 1px solid var(--rule-strong) !important;
-    color: var(--ink) !important;
+    background: transparent !important;
+    border-bottom: 1px solid var(--hairline) !important;
+    color: var(--text) !important;
     font-family: var(--f-ui) !important;
     font-size: 15px !important;
 }
-
 .mantine-Spotlight-action {
-    border-radius: 0 !important;
-    border-left: 2px solid transparent;
+    border-radius: 8px !important;
+    border-left: none !important;
     padding: 8px 14px !important;
+    margin: 2px 4px !important;
 }
-
 .mantine-Spotlight-action[data-selected],
 .mantine-Spotlight-action:hover {
-    background: var(--paper-2) !important;
-    border-left-color: var(--accent) !important;
+    background: var(--surface-2) !important;
 }
-
 .mantine-Spotlight-actionLabel {
-    color: var(--ink) !important;
+    color: var(--text) !important;
     font-size: 13px !important;
     font-weight: 500 !important;
 }
-
 .mantine-Spotlight-actionDescription {
-    color: var(--ink-3) !important;
+    color: var(--text-faint) !important;
     font-size: 11px !important;
     font-family: var(--f-mono) !important;
     letter-spacing: 0.02em;
 }
 
-/* ScrollArea — remove default borders */
-.mantine-ScrollArea-root {
-    background: transparent;
-}
+/* ScrollArea */
+.mantine-ScrollArea-root { background: transparent; }
 
-/* Accordion — flat paper cards, not white boxes. Used heavily in the
-   ApplicationForm drawer where the old look clashed with the paper tone. */
-.mantine-Accordion-root {
-    background: transparent;
-}
-
+/* Accordion */
+.mantine-Accordion-root { background: transparent; }
 .mantine-Accordion-item {
-    background: var(--card) !important;
-    border: 1px solid var(--rule) !important;
-    border-radius: 4px !important;
+    background: var(--surface) !important;
+    border: none !important;
+    border-radius: 10px !important;
     margin-bottom: 8px;
     overflow: hidden;
+    box-shadow: var(--shadow-sm);
 }
-
 .mantine-Accordion-control {
-    color: var(--ink) !important;
+    color: var(--text) !important;
     font-family: var(--f-ui);
     font-weight: 500;
     background: transparent !important;
 }
-
 .mantine-Accordion-control:hover {
-    background: var(--paper-2) !important;
+    background: var(--surface-2) !important;
 }
-
 .mantine-Accordion-label {
     font-size: 13px;
     font-weight: 600;
-    letter-spacing: 0.02em;
-    color: var(--ink);
+    letter-spacing: 0;
+    color: var(--text);
 }
-
 .mantine-Accordion-panel {
-    background: var(--card) !important;
-    color: var(--ink);
-    border-top: 1px solid var(--rule);
+    background: transparent !important;
+    color: var(--text);
+    border-top: 1px solid var(--hairline);
 }
-
 .mantine-Accordion-content {
     padding-top: 14px !important;
     padding-bottom: 14px !important;
 }
-
 .mantine-Accordion-chevron {
-    color: var(--ink-3) !important;
+    color: var(--text-muted) !important;
 }
 
-/* Alert — paper-toned, not neon */
+/* Alert */
 .mantine-Alert-root {
-    background: var(--card) !important;
-    border: 1px solid var(--rule) !important;
-    border-left: 3px solid var(--accent) !important;
-    color: var(--ink-2) !important;
-    border-radius: 3px !important;
+    background: var(--surface) !important;
+    border: none !important;
+    border-left: 2px solid var(--accent) !important;
+    color: var(--text) !important;
+    border-radius: 8px !important;
+    box-shadow: var(--shadow-sm);
 }
-
 .mantine-Alert-title,
 .mantine-Alert-message {
-    color: var(--ink-2) !important;
+    color: var(--text) !important;
 }
-
 .mantine-Alert-icon {
-    color: var(--accent-ink) !important;
+    color: var(--accent) !important;
 }
 
 /* Divider */
 .mantine-Divider-root {
-    border-color: var(--rule) !important;
+    border-color: var(--hairline) !important;
 }
 
-/* Switch — paper tones */
+/* Switch */
 .mantine-Switch-track {
-    background: var(--paper-3) !important;
-    border-color: var(--rule-strong) !important;
+    background: var(--surface-2) !important;
+    border-color: var(--hairline) !important;
 }
-
 .mantine-Switch-track[data-checked] {
-    background: var(--ink-2) !important;
-    border-color: var(--ink-2) !important;
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
 }
-
 .mantine-Switch-thumb {
-    background: var(--paper) !important;
-    border-color: var(--rule-strong) !important;
+    background: var(--bg) !important;
+    border-color: var(--hairline-2) !important;
 }
 
-/* Checkbox — keeps Mantine size but paper border */
+/* Checkbox */
 .mantine-Checkbox-input {
-    background: var(--card) !important;
-    border-color: var(--rule-strong) !important;
-    border-radius: 2px !important;
+    background: var(--surface) !important;
+    border-color: var(--hairline-2) !important;
+    border-radius: 5px !important;
 }
-
 .mantine-Checkbox-input:checked {
-    background: var(--ink-2) !important;
-    border-color: var(--ink-2) !important;
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
 }
 
-/* SegmentedControl — dark pill look becomes paper row */
+/* SegmentedControl */
 .mantine-SegmentedControl-root {
-    background: var(--card) !important;
-    border: 1px solid var(--rule-strong) !important;
-    border-radius: 4px !important;
+    background: var(--surface-2) !important;
+    border: none !important;
+    border-radius: 8px !important;
     box-shadow: none !important;
+    padding: 3px !important;
 }
-
 .mantine-SegmentedControl-indicator {
-    background: var(--paper-2) !important;
-    border: 1px solid var(--rule-strong) !important;
-    box-shadow: none !important;
+    background: var(--surface) !important;
+    border: none !important;
+    border-radius: 6px !important;
+    box-shadow: var(--shadow-sm) !important;
 }
-
 .mantine-SegmentedControl-label {
-    color: var(--ink-2) !important;
+    color: var(--text-muted) !important;
+    font-weight: 500;
 }
-
 .mantine-SegmentedControl-control[data-active] .mantine-SegmentedControl-label {
-    color: var(--ink) !important;
+    color: var(--text) !important;
     font-weight: 600;
 }
 
-/* Loader — ink tone */
+/* Loader */
 .mantine-Loader-root {
-    color: var(--ink-2);
+    color: var(--accent);
 }
 
-/* Pill / Tag in inputs */
+/* Pill / Tag */
 .mantine-Pill-root,
 .mantine-TagsInput-pill {
-    background: var(--paper-2) !important;
-    border: 1px solid var(--rule) !important;
-    color: var(--ink-2) !important;
-    border-radius: 2px !important;
+    background: var(--surface-2) !important;
+    border: none !important;
+    color: var(--text-muted) !important;
+    border-radius: 5px !important;
+    font-weight: 500 !important;
 }
 
-/* Cards without shadow — rely on rules, not elevation */
-.mantine-Card-root,
-.mantine-Paper-root {
-    background: var(--card) !important;
-    border-color: var(--rule) !important;
-    color: var(--ink);
-}
-
-/* RichTextEditor toolbar — wrap to next line on narrow drawers instead of
-   forcing a horizontal scrollbar in the parent container. */
+/* RichTextEditor toolbar */
 .mantine-RichTextEditor-toolbar {
     flex-wrap: wrap !important;
     row-gap: 4px;
+    background: transparent !important;
+    border-bottom: 1px solid var(--hairline) !important;
+}
+.mantine-RichTextEditor-control {
+    background: transparent !important;
+    border: none !important;
+    color: var(--text-muted) !important;
+}
+.mantine-RichTextEditor-control:hover {
+    background: var(--surface-2) !important;
+    color: var(--text) !important;
+}
+.mantine-RichTextEditor-root {
+    border: 1px solid var(--hairline) !important;
+    border-radius: 8px !important;
+    background: var(--surface) !important;
 }

@@ -13,7 +13,6 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ROUTES, type RoutePath } from '../routes';
 import { Kbd } from './primitives/Kbd';
-import { Label } from './primitives/Label';
 
 interface NavItem {
     path: RoutePath;
@@ -49,32 +48,37 @@ function SidebarItem({
             style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.77em',
+                gap: '0.7em',
                 minHeight: '2em',
-                padding: '0.2em 0.77em',
+                padding: '0.4em 0.7em',
                 marginInline: 6,
-                borderRadius: 3,
-                background: active ? 'var(--paper-3)' : 'transparent',
-                color: active ? 'var(--ink)' : 'var(--ink-2)',
+                borderRadius: 6,
+                background: active ? 'var(--surface)' : 'transparent',
+                color: active ? 'var(--text)' : 'var(--text-muted)',
+                fontWeight: active ? 500 : 450,
                 cursor: 'pointer',
-                borderLeft: active ? '2px solid var(--accent)' : '2px solid transparent',
-                paddingLeft: active ? '0.62em' : '0.77em',
-                transition: 'background 80ms',
+                transition: 'background 100ms, color 100ms',
             }}
             onMouseEnter={(e) => {
-                if (!active) e.currentTarget.style.background = 'rgba(0,0,0,0.03)';
+                if (!active) {
+                    e.currentTarget.style.background = 'var(--surface)';
+                    e.currentTarget.style.color = 'var(--text)';
+                }
             }}
             onMouseLeave={(e) => {
-                if (!active) e.currentTarget.style.background = 'transparent';
+                if (!active) {
+                    e.currentTarget.style.background = 'transparent';
+                    e.currentTarget.style.color = 'var(--text-muted)';
+                }
             }}
         >
             <span
                 style={{
-                    width: '1.4em',
+                    width: '1.3em',
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: active ? 'var(--ink)' : 'var(--ink-3)',
+                    color: active ? 'var(--accent)' : 'var(--text-faint)',
                     flexShrink: 0,
                 }}
             >
@@ -83,7 +87,6 @@ function SidebarItem({
             <span
                 style={{
                     fontSize: '0.96em',
-                    fontWeight: active ? 600 : 500,
                     flex: 1,
                 }}
             >
@@ -93,8 +96,8 @@ function SidebarItem({
                 <span
                     className="mono tnum"
                     style={{
-                        fontSize: '0.77em',
-                        color: active ? 'var(--ink-2)' : 'var(--ink-3)',
+                        fontSize: '0.78em',
+                        color: active ? 'var(--accent)' : 'var(--text-faint)',
                         fontWeight: 500,
                     }}
                 >
@@ -104,7 +107,7 @@ function SidebarItem({
             {shortcut && (
                 <Kbd
                     style={{
-                        fontSize: '0.77em',
+                        fontSize: '0.74em',
                         minWidth: '1.4em',
                         height: '1.4em',
                         padding: '0 0.4em',
@@ -117,13 +120,24 @@ function SidebarItem({
     );
 }
 
-function SidebarGroup({ label, children }: { label: string; children: React.ReactNode }) {
+function SidebarSection({ label, children }: { label: string; children: React.ReactNode }) {
     return (
-        <div style={{ marginTop: 14 }}>
-            <div style={{ padding: '0 14px 4px' }}>
-                <Label style={{ fontSize: '0.77em' }}>{label}</Label>
+        <div style={{ marginTop: 18 }}>
+            <div
+                style={{
+                    padding: '0 14px 6px',
+                    fontSize: '0.78em',
+                    fontWeight: 500,
+                    color: 'var(--text-faint)',
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                }}
+            >
+                {label}
             </div>
-            {children}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {children}
+            </div>
         </div>
     );
 }
@@ -151,14 +165,20 @@ export function Sidebar({ applicationsCount, candidatesCount }: Props) {
         return () => clearInterval(interval);
     }, []);
 
-    const items: NavItem[] = [
-        { path: ROUTES.dashboard,    icon: <IconInbox size={ICON_SIZE} />,     labelKey: 'nav.inbox',         shortcut: '⌘1' },
+    const today: NavItem[] = [
+        { path: ROUTES.dashboard, icon: <IconInbox size={ICON_SIZE} />, labelKey: 'nav.inbox', shortcut: '⌘1' },
+        { path: ROUTES.inbox,     icon: <IconMail size={ICON_SIZE} />,  labelKey: 'nav.mail',  shortcut: '⌘4' },
+    ];
+
+    const pipeline: NavItem[] = [
         { path: ROUTES.applications, icon: <IconBriefcase size={ICON_SIZE} />, labelKey: 'tabs.applications', count: applicationsCount, shortcut: '⌘2' },
         { path: ROUTES.candidates,   icon: <IconSparkles size={ICON_SIZE} />,  labelKey: 'tabs.candidates',   count: candidatesCount,   shortcut: '⌘3' },
-        { path: ROUTES.inbox,        icon: <IconMail size={ICON_SIZE} />,      labelKey: 'nav.mail',          shortcut: '⌘4' },
         { path: ROUTES.agents,       icon: <IconRobot size={ICON_SIZE} />,     labelKey: 'nav.agents',        shortcut: '⌘5' },
-        { path: ROUTES.chat,         icon: <IconMessage size={ICON_SIZE} />,   labelKey: 'nav.chat',          shortcut: '⌘6' },
-        { path: ROUTES.analytics,    icon: <IconChartBar size={ICON_SIZE} />,  labelKey: 'nav.analytics',     shortcut: '⌘7' },
+    ];
+
+    const more: NavItem[] = [
+        { path: ROUTES.chat,      icon: <IconMessage size={ICON_SIZE} />,  labelKey: 'nav.chat',      shortcut: '⌘6' },
+        { path: ROUTES.analytics, icon: <IconChartBar size={ICON_SIZE} />, labelKey: 'nav.analytics', shortcut: '⌘7' },
     ];
 
     const isActive = (path: string) =>
@@ -168,8 +188,7 @@ export function Sidebar({ applicationsCount, candidatesCount }: Props) {
         <div
             className="sidebar-root"
             style={{
-                background: 'var(--paper)',
-                borderRight: '1px solid var(--rule-strong)',
+                background: 'var(--bg)',
                 display: 'flex',
                 flexDirection: 'column',
                 flexShrink: 0,
@@ -177,38 +196,54 @@ export function Sidebar({ applicationsCount, candidatesCount }: Props) {
         >
             <div
                 style={{
-                    padding: '14px 16px 10px',
+                    padding: '16px 20px 4px',
                 }}
             >
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                    <span
-                        className="serif"
-                        style={{
-                            fontSize: '1.54em',
-                            fontWeight: 600,
-                            color: 'var(--ink)',
-                            letterSpacing: '-0.01em',
-                        }}
-                    >
-                        {t('app.titleShort')}
-                        <span style={{ color: 'var(--accent-ink)' }}>.</span>
-                    </span>
+                <div
+                    style={{
+                        display: 'flex',
+                        alignItems: 'baseline',
+                        gap: 2,
+                        fontWeight: 600,
+                        fontSize: '15px',
+                        letterSpacing: '-0.02em',
+                        color: 'var(--text)',
+                    }}
+                >
+                    {t('app.titleShort')}
+                    <span style={{ color: 'var(--accent)' }}>.</span>
                 </div>
                 <div
                     className="mono"
                     style={{
-                        fontSize: '0.77em',
-                        color: 'var(--ink-3)',
-                        marginTop: 2,
+                        fontSize: '0.74em',
+                        color: 'var(--text-faint)',
+                        marginTop: 4,
                         letterSpacing: '0.04em',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
                     }}
                 >
-                    local · offline · yours
+                    <span
+                        style={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: '50%',
+                            background: ollamaRunning ? 'var(--success)' : 'var(--text-faint)',
+                            display: 'inline-block',
+                        }}
+                    />
+                    {ollamaRunning === null
+                        ? 'connecting…'
+                        : ollamaRunning
+                          ? 'ollama · ready'
+                          : 'ollama · offline'}
                 </div>
             </div>
 
-            <SidebarGroup label={t('nav.section.main')}>
-                {items.map((item) => (
+            <SidebarSection label={t('nav.section.main')}>
+                {today.map((item) => (
                     <SidebarItem
                         key={item.path}
                         icon={item.icon}
@@ -219,18 +254,46 @@ export function Sidebar({ applicationsCount, candidatesCount }: Props) {
                         onClick={() => navigate(item.path)}
                     />
                 ))}
-            </SidebarGroup>
+            </SidebarSection>
+
+            <SidebarSection label="Pipeline">
+                {pipeline.map((item) => (
+                    <SidebarItem
+                        key={item.path}
+                        icon={item.icon}
+                        label={t(item.labelKey)}
+                        count={item.count}
+                        shortcut={item.shortcut}
+                        active={isActive(item.path)}
+                        onClick={() => navigate(item.path)}
+                    />
+                ))}
+            </SidebarSection>
+
+            <SidebarSection label="Mehr">
+                {more.map((item) => (
+                    <SidebarItem
+                        key={item.path}
+                        icon={item.icon}
+                        label={t(item.labelKey)}
+                        shortcut={item.shortcut}
+                        active={isActive(item.path)}
+                        onClick={() => navigate(item.path)}
+                    />
+                ))}
+            </SidebarSection>
 
             <div style={{ flex: 1 }} />
 
-            <SidebarItem
-                icon={<IconSettings size={ICON_SIZE} />}
-                label={t('toolbar.settings')}
-                active={isActive(ROUTES.settings)}
-                shortcut="⌘,"
-                onClick={() => navigate(ROUTES.settings)}
-            />
-
+            <div style={{ padding: '8px 0 12px' }}>
+                <SidebarItem
+                    icon={<IconSettings size={ICON_SIZE} />}
+                    label={t('toolbar.settings')}
+                    active={isActive(ROUTES.settings)}
+                    shortcut="⌘,"
+                    onClick={() => navigate(ROUTES.settings)}
+                />
+            </div>
         </div>
     );
 }

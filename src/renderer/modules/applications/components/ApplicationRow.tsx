@@ -68,10 +68,10 @@ export function ApplicationRow({
     const [hovered, setHovered] = useState(false);
 
     const rowBg = selected
-        ? 'var(--row-selected)'
+        ? 'var(--accent-soft)'
         : hovered
-          ? 'var(--row-hover)'
-          : 'var(--card)';
+          ? 'var(--surface-2)'
+          : 'var(--surface)';
 
     return (
         <>
@@ -114,12 +114,12 @@ export function ApplicationRow({
                 display: 'grid',
                 gridTemplateColumns: rowGrid,
                 alignItems: 'center',
-                height: 40,
+                height: 44,
                 background: rowBg,
-                borderBottom: '1px solid var(--rule)',
-                boxShadow: selected ? 'inset 3px 0 0 var(--accent)' : 'none',
+                borderBottom: '1px solid var(--hairline)',
+                boxShadow: selected ? 'inset 2px 0 0 var(--accent)' : 'none',
                 cursor: 'pointer',
-                transition: 'background 80ms, box-shadow 80ms',
+                transition: 'background 100ms, box-shadow 100ms',
             }}
         >
             {/* 1: priority strip */}
@@ -173,19 +173,23 @@ export function ApplicationRow({
             >
                 <div
                     style={{
-                        width: 22,
-                        height: 22,
+                        width: 26,
+                        height: 26,
                         flexShrink: 0,
-                        background: 'var(--card)',
-                        border: '1px solid var(--rule-strong)',
+                        background: 'var(--surface-2)',
+                        borderRadius: 6,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                     }}
                 >
                     <span
-                        className="mono"
-                        style={{ fontSize: 9, fontWeight: 600, color: 'var(--ink-2)' }}
+                        style={{
+                            fontSize: 10.5,
+                            fontWeight: 600,
+                            color: 'var(--text-muted)',
+                            letterSpacing: '-0.01em',
+                        }}
                     >
                         {initials}
                     </span>
@@ -302,7 +306,7 @@ export function ApplicationRow({
                     position: 'sticky',
                     right: 0,
                     background: rowBg,
-                    borderLeft: '1px solid var(--rule)',
+                    borderLeft: '1px solid var(--hairline)',
                     zIndex: 1,
                 }}
             >

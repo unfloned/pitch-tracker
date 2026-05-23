@@ -17,22 +17,28 @@ interface Props {
 }
 
 /**
- * Dense, paper-styled action line with a leading glyph or mono tag, title +
- * subtitle, a colored status pill on the right, and a chevron. Shared between
- * every Today-list entry (offers, interviews, follow-ups, candidates).
+ * v2 action line: soft hover, no borders. Leading glyph or icon-tag,
+ * title + subtitle, soft tinted pill on the right, chevron.
  */
 export function ActionRow({ tag, title, subtitle, rightLabel, rightTone, status, onClick }: Props) {
-    const rightBg =
+    const toneBg =
         rightTone === 'moss'
-            ? 'var(--moss)'
+            ? 'var(--success-soft)'
             : rightTone === 'rust'
-              ? 'var(--rust)'
+              ? 'var(--danger-soft)'
+              : rightTone === 'accent'
+                ? 'var(--accent-soft)'
+                : rightTone === 'ink'
+                  ? 'var(--surface-3)'
+                  : 'var(--surface-2)';
+    const toneFg =
+        rightTone === 'moss'
+            ? 'var(--success)'
+            : rightTone === 'rust'
+              ? 'var(--danger)'
               : rightTone === 'accent'
                 ? 'var(--accent)'
-                : rightTone === 'ink'
-                  ? 'var(--ink)'
-                  : 'var(--paper-2)';
-    const rightColor = rightTone ? 'var(--paper)' : 'var(--ink-2)';
+                : 'var(--text)';
 
     return (
         <UnstyledButton
@@ -41,14 +47,14 @@ export function ActionRow({ tag, title, subtitle, rightLabel, rightTone, status,
                 display: 'flex',
                 alignItems: 'center',
                 gap: 12,
-                padding: '10px 12px',
+                padding: '12px 14px',
                 width: '100%',
-                borderBottom: '1px solid var(--rule)',
+                borderRadius: 8,
                 background: 'transparent',
-                transition: 'background 80ms',
+                transition: 'background 100ms',
             }}
             onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--paper-2)';
+                e.currentTarget.style.background = 'var(--surface-2)';
             }}
             onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'transparent';
@@ -61,15 +67,15 @@ export function ActionRow({ tag, title, subtitle, rightLabel, rightTone, status,
             ) : (
                 <div
                     style={{
-                        width: 22,
-                        height: 22,
+                        width: 24,
+                        height: 24,
                         flexShrink: 0,
-                        background: 'var(--card)',
-                        border: '1px solid var(--rule-strong)',
+                        background: 'var(--surface-2)',
+                        borderRadius: 6,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: 'var(--ink-2)',
+                        color: 'var(--text-muted)',
                     }}
                 >
                     {tag}
@@ -78,8 +84,8 @@ export function ActionRow({ tag, title, subtitle, rightLabel, rightTone, status,
             <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
                 <div
                     style={{
-                        fontSize: 13,
-                        color: 'var(--ink)',
+                        fontSize: 13.5,
+                        color: 'var(--text)',
                         fontWeight: 500,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -91,8 +97,9 @@ export function ActionRow({ tag, title, subtitle, rightLabel, rightTone, status,
                 {subtitle && (
                     <div
                         style={{
-                            fontSize: 11,
-                            color: 'var(--ink-3)',
+                            fontSize: 12,
+                            color: 'var(--text-muted)',
+                            marginTop: 2,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
@@ -108,17 +115,19 @@ export function ActionRow({ tag, title, subtitle, rightLabel, rightTone, status,
                     style={{
                         fontSize: 10.5,
                         fontWeight: 600,
-                        padding: '2px 6px',
-                        background: rightBg,
-                        color: rightColor,
-                        letterSpacing: '0.02em',
+                        padding: '3px 8px',
+                        background: toneBg,
+                        color: toneFg,
+                        letterSpacing: '0.04em',
+                        borderRadius: 5,
                         flexShrink: 0,
+                        textTransform: 'uppercase',
                     }}
                 >
                     {rightLabel}
                 </span>
             )}
-            <IconArrowRight size={12} style={{ color: 'var(--ink-4)', flexShrink: 0 }} />
+            <IconArrowRight size={13} style={{ color: 'var(--text-faint)', flexShrink: 0 }} />
         </UnstyledButton>
     );
 }

@@ -1,48 +1,48 @@
 import { createTheme, MantineColorsTuple } from '@mantine/core';
 import { fonts } from './theme/tokens';
 
-/** Marigold-derived tuple (light→dark) tuned to the paper palette. */
+/** Amber accent tuple (light→dark) tuned to the v2 warm palette. */
 const accent: MantineColorsTuple = [
-    '#fdf6e5',
-    '#f9ead0',
-    '#f1d39f',
-    '#e8bb6a',
-    '#dba53b',
-    '#c98c1e',
-    '#b77612',
-    '#95600e',
-    '#744a0a',
-    '#543505',
+    '#fff5e8',
+    '#ffe5c8',
+    '#ffd1a0',
+    '#ffbb78',
+    '#ffa850',
+    '#ff9128',
+    '#e87a14',
+    '#c26416',
+    '#9e500f',
+    '#7a3d09',
 ];
 
-/** Moss-derived tuple for positive/offer states. */
+/** Sage tuple for success/offer states. */
 const moss: MantineColorsTuple = [
-    '#f0f4ee',
-    '#dce5d9',
-    '#bccaad',
-    '#9caf80',
-    '#7f9757',
-    '#658341',
-    '#4f6a32',
-    '#3d5327',
-    '#2e3e1e',
-    '#1f2a15',
+    '#f1f5ee',
+    '#dde6d7',
+    '#c1d2b6',
+    '#a4bd93',
+    '#8fb075',
+    '#76985d',
+    '#5e7e47',
+    '#4a6b3a',
+    '#39542c',
+    '#2a3f20',
 ];
 
 export const theme = createTheme({
     primaryColor: 'accent',
     colors: { accent, moss },
-    defaultRadius: 4,
+    defaultRadius: 7,
     fontFamily: fonts.ui,
     fontFamilyMonospace: fonts.mono,
     headings: {
-        fontFamily: fonts.display,
-        fontWeight: '500',
+        fontFamily: fonts.ui,
+        fontWeight: '600',
         sizes: {
-            h1: { fontSize: '2rem', lineHeight: '1.05', fontWeight: '500' },
-            h2: { fontSize: '1.5rem', lineHeight: '1.15', fontWeight: '500' },
-            h3: { fontSize: '1.25rem', lineHeight: '1.25', fontWeight: '500' },
-            h4: { fontSize: '1.05rem', lineHeight: '1.3', fontWeight: '600' },
+            h1: { fontSize: '2rem', lineHeight: '1.1', fontWeight: '600' },
+            h2: { fontSize: '1.5rem', lineHeight: '1.2', fontWeight: '600' },
+            h3: { fontSize: '1.2rem', lineHeight: '1.3', fontWeight: '600' },
+            h4: { fontSize: '1rem', lineHeight: '1.35', fontWeight: '600' },
         },
     },
     spacing: {
@@ -54,20 +54,20 @@ export const theme = createTheme({
     },
     components: {
         Button: {
-            defaultProps: { radius: 4 },
+            defaultProps: { radius: 7 },
             styles: { root: { fontWeight: 500 } },
         },
         Card: {
-            defaultProps: { radius: 4, shadow: undefined, withBorder: true },
+            defaultProps: { radius: 10, shadow: undefined, withBorder: false },
         },
         Paper: {
-            defaultProps: { radius: 4, shadow: undefined },
+            defaultProps: { radius: 10, shadow: undefined },
         },
         Badge: {
-            defaultProps: { radius: 2 },
+            defaultProps: { radius: 6 },
         },
         Modal: {
-            defaultProps: { radius: 0, shadow: 'none' },
+            defaultProps: { radius: 12, shadow: 'none' },
         },
         Drawer: {
             defaultProps: { radius: 0, shadow: 'none' },

@@ -1,7 +1,6 @@
 import { Checkbox } from '@mantine/core';
 import type { ApplicationRecord } from '../../../../preload/index';
 import type { SerializedJobCandidate } from '@shared/job-search';
-import { Label } from '../../../components/primitives/Label';
 import { CandidateRow } from './CandidateRow';
 
 interface Props {
@@ -15,7 +14,7 @@ interface Props {
     onRefresh: () => Promise<void>;
 }
 
-/** Paper-bordered list with a select-all header and one row per candidate. */
+/** v2 list: soft surface, no border, sticky select-all header. */
 export function CandidateList({
     candidates,
     selectedIds,
@@ -27,15 +26,22 @@ export function CandidateList({
     onRefresh,
 }: Props) {
     return (
-        <div style={{ border: '1px solid var(--rule)', background: 'var(--card)' }}>
+        <div
+            style={{
+                background: 'var(--surface)',
+                borderRadius: 10,
+                boxShadow: 'var(--shadow-sm)',
+                overflow: 'hidden',
+            }}
+        >
             <div
                 style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 12,
-                    padding: '6px 12px',
-                    borderBottom: '1px solid var(--rule-strong)',
-                    background: 'var(--paper-2)',
+                    gap: 14,
+                    padding: '10px 18px',
+                    borderBottom: '1px solid var(--hairline)',
+                    background: 'var(--surface)',
                 }}
             >
                 <Checkbox
@@ -44,22 +50,32 @@ export function CandidateList({
                     indeterminate={!allSelected && selectedIds.size > 0}
                     onChange={onToggleSelectAll}
                 />
-                <Label>
+                <span
+                    style={{
+                        fontSize: 11.5,
+                        fontWeight: 500,
+                        color: 'var(--text-muted)',
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                    }}
+                >
                     {candidates.length} {candidates.length === 1 ? 'match' : 'matches'}
-                </Label>
+                </span>
             </div>
 
-            {candidates.map((c) => (
-                <CandidateRow
-                    key={c.id}
-                    candidate={c}
-                    selected={selectedIds.has(c.id)}
-                    onOpen={onOpen}
-                    onToggleSelect={onToggleSelect}
-                    onCandidateImported={onCandidateImported}
-                    onRefresh={onRefresh}
-                />
-            ))}
+            <div style={{ padding: 6 }}>
+                {candidates.map((c) => (
+                    <CandidateRow
+                        key={c.id}
+                        candidate={c}
+                        selected={selectedIds.has(c.id)}
+                        onOpen={onOpen}
+                        onToggleSelect={onToggleSelect}
+                        onCandidateImported={onCandidateImported}
+                        onRefresh={onRefresh}
+                    />
+                ))}
+            </div>
         </div>
     );
 }

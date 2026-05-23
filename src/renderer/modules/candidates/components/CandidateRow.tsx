@@ -40,15 +40,15 @@ export function CandidateRow({
             style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 12,
-                padding: '10px 12px',
-                borderBottom: '1px solid var(--rule)',
+                gap: 14,
+                padding: '12px 14px',
+                borderRadius: 8,
                 cursor: 'pointer',
-                transition: 'background 80ms',
+                transition: 'background 100ms',
                 position: 'relative',
             }}
             onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--paper-2)';
+                e.currentTarget.style.background = 'var(--surface-2)';
             }}
             onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'transparent';
@@ -225,14 +225,14 @@ function SourceBadge({ sourceKey }: { sourceKey: string }) {
         <span
             style={{
                 display: 'inline-block',
-                padding: '1px 5px',
-                background: 'var(--paper-2)',
-                border: '1px solid var(--rule)',
-                color: 'var(--ink-2)',
-                fontSize: 9.5,
+                padding: '2px 6px',
+                background: 'var(--surface-2)',
+                color: 'var(--text-muted)',
+                fontSize: 10,
                 fontWeight: 600,
-                letterSpacing: '0.03em',
+                letterSpacing: '0.05em',
                 textTransform: 'uppercase',
+                borderRadius: 4,
                 flexShrink: 0,
             }}
         >
@@ -249,12 +249,14 @@ function ImportedBadge({ label }: { label: string }) {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 4,
-                padding: '2px 6px',
-                background: 'var(--moss)',
-                color: 'var(--paper)',
-                fontSize: 10,
+                padding: '3px 8px',
+                background: 'var(--success-soft)',
+                color: 'var(--success)',
+                fontSize: 10.5,
                 fontWeight: 600,
-                letterSpacing: '0.02em',
+                letterSpacing: '0.04em',
+                borderRadius: 5,
+                textTransform: 'uppercase',
             }}
         >
             <IconCheck size={10} />

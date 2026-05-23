@@ -19,7 +19,14 @@ export function RecentActivityCard({ items, onOpenApplication }: Props) {
     return (
         <div>
             <SectionHeader title={t('dashboard.sectionActivity')} />
-            <div style={{ border: '1px solid var(--rule)', background: 'var(--card)' }}>
+            <div
+                style={{
+                    background: 'var(--surface)',
+                    borderRadius: 10,
+                    boxShadow: 'var(--shadow-sm)',
+                    padding: 6,
+                }}
+            >
                 {items.map((app) => (
                     <ActivityRow key={app.id} app={app} onClick={() => onOpenApplication(app)} />
                 ))}
@@ -41,15 +48,15 @@ function ActivityRow({
             style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 12,
-                padding: '10px 12px',
+                gap: 14,
+                padding: '12px 14px',
                 width: '100%',
-                borderBottom: '1px solid var(--rule)',
+                borderRadius: 8,
                 background: 'transparent',
-                transition: 'background 80ms',
+                transition: 'background 100ms',
             }}
             onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'var(--paper-2)';
+                e.currentTarget.style.background = 'var(--surface-2)';
             }}
             onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'transparent';
@@ -59,8 +66,8 @@ function ActivityRow({
             <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
                 <div
                     style={{
-                        fontSize: 13,
-                        color: 'var(--ink)',
+                        fontSize: 13.5,
+                        color: 'var(--text)',
                         fontWeight: 500,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -71,8 +78,9 @@ function ActivityRow({
                 </div>
                 <div
                     style={{
-                        fontSize: 11,
-                        color: 'var(--ink-3)',
+                        fontSize: 12,
+                        color: 'var(--text-muted)',
+                        marginTop: 2,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
@@ -87,8 +95,8 @@ function ActivityRow({
             <span
                 className="mono"
                 style={{
-                    fontSize: 10,
-                    color: 'var(--ink-3)',
+                    fontSize: 11,
+                    color: 'var(--text-faint)',
                     letterSpacing: '0.02em',
                     minWidth: 70,
                     textAlign: 'right',

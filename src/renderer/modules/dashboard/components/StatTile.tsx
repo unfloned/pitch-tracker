@@ -1,5 +1,4 @@
 import { UnstyledButton } from '@mantine/core';
-import { Label } from '../../../components/primitives/Label';
 
 interface Props {
     label: string;
@@ -9,29 +8,41 @@ interface Props {
 }
 
 /**
- * Paper surface with Label + serif numeric value. Click-through optional -
- * the "total" tile uses it to jump into Applications.
+ * v2 stat tile: surface with soft shadow, no border. Click-through optional.
  */
 export function StatTile({ label, value, sub, onClick }: Props) {
     const body = (
         <div
             style={{
-                padding: 16,
-                border: '1px solid var(--rule)',
-                background: 'var(--card)',
+                padding: '18px 20px 20px',
+                background: 'var(--surface)',
+                borderRadius: 10,
+                boxShadow: 'var(--shadow-sm)',
                 height: '100%',
+                transition: 'background 120ms, transform 120ms, box-shadow 120ms',
             }}
         >
-            <Label>{label}</Label>
             <div
-                className="serif tnum"
                 style={{
-                    fontSize: 32,
+                    fontSize: 11,
                     fontWeight: 500,
-                    color: 'var(--ink)',
-                    letterSpacing: '-0.02em',
+                    color: 'var(--text-faint)',
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    marginBottom: 10,
+                }}
+            >
+                {label}
+            </div>
+            <div
+                className="tnum"
+                style={{
+                    fontFamily: 'var(--f-ui)',
+                    fontSize: 30,
+                    fontWeight: 600,
+                    color: 'var(--text)',
+                    letterSpacing: '-0.025em',
                     lineHeight: 1,
-                    marginTop: 8,
                 }}
             >
                 {value}
@@ -40,10 +51,10 @@ export function StatTile({ label, value, sub, onClick }: Props) {
                 <div
                     className="mono"
                     style={{
-                        fontSize: 10,
-                        color: 'var(--ink-4)',
+                        fontSize: 10.5,
+                        color: 'var(--text-faint)',
                         letterSpacing: '0.02em',
-                        marginTop: 6,
+                        marginTop: 8,
                     }}
                 >
                     {sub}
@@ -57,6 +68,11 @@ export function StatTile({ label, value, sub, onClick }: Props) {
             <UnstyledButton
                 onClick={onClick}
                 style={{ width: '100%', textAlign: 'left', height: '100%' }}
+                styles={{
+                    root: {
+                        borderRadius: 10,
+                    },
+                }}
             >
                 {body}
             </UnstyledButton>

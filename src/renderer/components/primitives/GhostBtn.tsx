@@ -9,7 +9,7 @@ interface Props {
     title?: string;
 }
 
-/** Quiet keyboard-driven button. 1px border, paper-2 fill when active. */
+/** v2 quiet button: no border at rest, soft surface hover. */
 export function GhostBtn({ children, onClick, active = false, disabled, style, title }: Props) {
     return (
         <button
@@ -19,31 +19,32 @@ export function GhostBtn({ children, onClick, active = false, disabled, style, t
             title={title}
             style={{
                 fontFamily: 'var(--f-ui)',
-                fontSize: 12,
+                fontSize: 12.5,
                 fontWeight: 500,
-                color: active ? 'var(--ink)' : 'var(--ink-2)',
-                background: active ? 'var(--paper-2)' : 'transparent',
-                border: '1px solid ' + (active ? 'var(--rule-strong)' : 'var(--rule)'),
-                borderRadius: 4,
-                padding: '4px 9px',
+                color: active ? 'var(--text)' : 'var(--text-muted)',
+                background: active ? 'var(--surface-2)' : 'transparent',
+                border: 'none',
+                borderRadius: 7,
+                padding: '5px 10px',
                 cursor: disabled ? 'not-allowed' : 'pointer',
                 opacity: disabled ? 0.45 : 1,
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
-                transition: 'background 120ms, border-color 120ms',
+                transition: 'background 120ms, color 120ms',
+                WebkitAppRegion: 'no-drag',
                 ...style,
-            }}
+            } as CSSProperties}
             onMouseEnter={(e) => {
                 if (!active && !disabled) {
-                    e.currentTarget.style.background = 'var(--card)';
-                    e.currentTarget.style.borderColor = 'var(--rule-strong)';
+                    e.currentTarget.style.background = 'var(--surface-2)';
+                    e.currentTarget.style.color = 'var(--text)';
                 }
             }}
             onMouseLeave={(e) => {
                 if (!active && !disabled) {
                     e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.borderColor = 'var(--rule)';
+                    e.currentTarget.style.color = 'var(--text-muted)';
                 }
             }}
         >

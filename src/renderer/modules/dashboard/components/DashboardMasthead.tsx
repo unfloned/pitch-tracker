@@ -1,27 +1,30 @@
 import { useTranslation } from 'react-i18next';
-import { Label } from '../../../components/primitives/Label';
 
 export function DashboardMasthead() {
     const { t } = useTranslation();
     return (
         <div>
-            <Label>Inbox</Label>
             <div
-                className="serif"
+                className="mono"
                 style={{
-                    fontSize: 28,
-                    fontWeight: 500,
-                    color: 'var(--ink)',
-                    letterSpacing: '-0.02em',
-                    marginTop: 4,
-                    lineHeight: 1.05,
+                    fontSize: 11,
+                    color: 'var(--text-faint)',
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    marginBottom: 10,
                 }}
             >
                 {t('dashboard.title')}
             </div>
             <div
-                className="mono"
-                style={{ fontSize: 11, color: 'var(--ink-3)', marginTop: 4 }}
+                style={{
+                    fontFamily: 'var(--f-ui)',
+                    fontSize: 36,
+                    fontWeight: 600,
+                    color: 'var(--text)',
+                    letterSpacing: '-0.025em',
+                    lineHeight: 1.1,
+                }}
             >
                 {t('dashboard.subtitle')}
             </div>

@@ -1,6 +1,6 @@
 import { IconSparkles } from '@tabler/icons-react';
+import { Button } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
-import { GhostBtn } from '../../../components/primitives/GhostBtn';
 
 interface Props {
     onNewEntry: () => void;
@@ -17,54 +17,46 @@ export function EmptyState({ onNewEntry, onGoToAgents }: Props) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 minHeight: 500,
-                gap: 16,
+                gap: 20,
             }}
         >
             <div
                 style={{
-                    width: 56,
-                    height: 56,
-                    background: 'var(--accent)',
+                    width: 64,
+                    height: 64,
+                    background: 'var(--accent-soft)',
+                    borderRadius: 16,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: 'var(--ink)',
+                    color: 'var(--accent)',
                 }}
             >
                 <IconSparkles size={28} />
             </div>
-            <div style={{ textAlign: 'center', maxWidth: 420 }}>
+            <div style={{ textAlign: 'center', maxWidth: 440 }}>
                 <div
-                    className="serif"
                     style={{
-                        fontSize: 22,
-                        fontWeight: 500,
-                        color: 'var(--ink)',
-                        letterSpacing: '-0.015em',
-                        marginBottom: 6,
+                        fontSize: 24,
+                        fontWeight: 600,
+                        color: 'var(--text)',
+                        letterSpacing: '-0.02em',
+                        marginBottom: 8,
                     }}
                 >
                     {t('dashboard.welcomeTitle')}
                 </div>
-                <div style={{ fontSize: 13.5, color: 'var(--ink-3)', lineHeight: 1.5 }}>
+                <div style={{ fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.55 }}>
                     {t('dashboard.welcomeSubtitle')}
                 </div>
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-                <GhostBtn
-                    active
-                    onClick={onNewEntry}
-                    style={{
-                        background: 'var(--ink)',
-                        color: 'var(--paper)',
-                        borderColor: 'var(--ink)',
-                    }}
-                >
-                    <span>＋ {t('toolbar.newEntry')}</span>
-                </GhostBtn>
-                <GhostBtn onClick={onGoToAgents}>
-                    <span>{t('nav.agents')}</span>
-                </GhostBtn>
+                <Button onClick={onNewEntry} variant="filled">
+                    ＋ {t('toolbar.newEntry')}
+                </Button>
+                <Button onClick={onGoToAgents} variant="subtle">
+                    {t('nav.agents')}
+                </Button>
             </div>
         </div>
     );

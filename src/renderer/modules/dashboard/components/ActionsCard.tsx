@@ -46,7 +46,14 @@ export function ActionsCard({
             {actionCount === 0 ? (
                 <AllClearBanner />
             ) : (
-                <div style={{ border: '1px solid var(--rule)', background: 'var(--card)' }}>
+                <div
+                    style={{
+                        background: 'var(--surface)',
+                        borderRadius: 10,
+                        boxShadow: 'var(--shadow-sm)',
+                        padding: 6,
+                    }}
+                >
                     {pendingOffers.map((app) => (
                         <ActionRow
                             key={`offer-${app.id}`}
@@ -111,22 +118,27 @@ function AllClearBanner() {
     return (
         <div
             style={{
-                padding: 22,
-                border: '1px solid var(--rule)',
-                background: 'var(--card)',
+                padding: 28,
+                background: 'var(--surface)',
+                borderRadius: 10,
+                boxShadow: 'var(--shadow-sm)',
                 textAlign: 'center',
             }}
         >
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                <IconCheck size={16} style={{ color: 'var(--moss)' }} />
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                <IconCheck size={16} style={{ color: 'var(--success)' }} />
                 <span
-                    className="serif"
-                    style={{ fontSize: 17, fontWeight: 500, color: 'var(--ink)' }}
+                    style={{
+                        fontSize: 16,
+                        fontWeight: 600,
+                        color: 'var(--text)',
+                        letterSpacing: '-0.01em',
+                    }}
                 >
                     {t('dashboard.allClearTitle')}
                 </span>
             </div>
-            <div style={{ fontSize: 12.5, color: 'var(--ink-3)', marginTop: 6 }}>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8 }}>
                 {t('dashboard.allClearSubtitle')}
             </div>
         </div>
